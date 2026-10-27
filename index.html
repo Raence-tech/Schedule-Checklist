@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Schedule Checklist</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2f6fdb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Checklist">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
 <style>
 :root {
@@ -71,7 +77,7 @@ li button.icon { background: transparent; border: none; color: var(--muted); pad
     <img id="preview" alt="Your schedule">
     <div class="row"><button id="extractBtn" disabled>Read to-do list from image</button></div>
     <div id="status"></div>
-    <p class="hint">The reader keeps only the to-do column and skips dates, times, and course codes. Review the result before adding it.</p>
+    <p class="hint">The reader finds the To-Do column, reads each row, and skips dates, times, and course codes. Review the result before adding it.</p>
     <textarea id="manualText" placeholder="e.g.&#10;Submit report&#10;Call dentist&#10;Buy groceries"></textarea>
     <div class="row"><button id="importBtn" class="secondary">Add tasks from text</button></div>
   </section>
@@ -119,36 +125,34 @@ li button.icon { background: transparent; border: none; color: var(--muted); pad
   // ---------- Text helpers ----------
   function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function cleanText(s) { return s.replace(/\s+/g, " ").trim(); }
-  function stripBullet(s) {
-    return s.replace(/^[\s\-\*\u2022\u25CF\u25E6\u25AA\u00B7\[\]xX☐☑✓]+(?=\S)/, "").trim();
-  }
+  // Remove leading bullets and symbols, keep letters and digits.
+  function stripLead(s) { return s.replace(/^[^\p{L}\p{N}]+/u, "").trim(); }
 
-  // Lines that are table noise rather than tasks: headers, dates, times, course codes, row numbers.
   function isNoise(s) {
     if (s.length < 3) return true;
-    if (/^[\d\W_]+$/.test(s)) return true;                                    // numbers / symbols only
-    if (/^\d{1,2}-\d{1,2}(\s*\(\w{3}\))?$/.test(s)) return true;             // 10-26 (Mon)
-    if (/^\d{1,2}:\d{2}\s*(AM|PM)?$/i.test(s)) return true;                  // 11:59 PM
-    if (/^\(?(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\)?$/i.test(s)) return true;      // weekday only
-    if (/^[A-Z]{2,6}$/.test(s)) return true;                                  // course codes like IAAS
-    if (/ANNOUNCEMENTS|\bAs of\b|^BSIT/i.test(s)) return true;               // page title
-    if (/^(COURSE|CODE|DEADLINE|WHEN|DATE|TIME|WHAT|TO[\s-]?DO|#)\b/i.test(s)) return true; // table headers
+    if (/^[\d\W_]+$/.test(s)) return true;                                       // numbers or symbols only
+    if (/^\d{1,2}-\d{1,2}(\s*\(\w{3}\))?$/.test(s)) return true;                // 10-26 (Mon)
+    if (/^\d{1,2}:\d{2}\s*(AM|PM)?$/i.test(s)) return true;                     // 11:59 PM
+    if (/^\(?(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\)?$/i.test(s)) return true;         // weekday only
+    if (/^[A-Z]{2,6}$/.test(s)) return true;                                     // course codes like IAAS
+    if (/ANNOUNCEMENTS|\bAs of\b|^BSIT/i.test(s)) return true;                  // page title
+    if (/^(COURSE|CODE|DEADLINE|WHEN|DATE|TIME|WHAT|TO[\s-]?DO|#)\b/i.test(s)) return true; // headers
+    if (/^\(?WHAT\??\)?$/i.test(s)) return true;
     return false;
   }
 
-  // ---------- Smart extraction ----------
-  // Turns one OCR paragraph (one table cell) into task strings.
-  function paragraphToItems(text) {
-    const lines = text.split(/\r?\n/).map((l) => cleanText(stripBullet(l))).filter((l) => l.length > 0);
+  // Turns the text of one table row into task strings.
+  function rowToItems(text) {
+    const lines = text.split(/\r?\n/).map((l) => cleanText(stripLead(l))).filter((l) => l.length > 0);
     if (lines.length === 0) return [];
 
-    // A heading with bullets under it ("Notebook:" then "Week 6 Assignment", ...)
+    // Heading with bullets under it: "Notebook:" then "Week 6 Assignment", ...
     if (lines.length > 1 && /:$/.test(lines[0])) {
       const heading = lines[0].replace(/:$/, "").trim();
       return lines.slice(1).map((l) => `${heading}: ${l}`);
     }
 
-    // Otherwise, a new task starts at a numbered code (e.g. "2.5.2.6 ..."); other lines continue it.
+    // A new task starts at a numbered code such as "2.5.2.6"; other lines continue the task.
     const items = [];
     let current = "";
     for (const l of lines) {
@@ -163,43 +167,124 @@ li button.icon { background: transparent; border: none; color: var(--muted); pad
     return items;
   }
 
-  // Collect OCR paragraphs (table cells) in reading order.
-  function getParagraphs(data) {
-    const paras = [];
-    (data.blocks || []).forEach((b) => (b.paragraphs || []).forEach((p) => paras.push(p)));
-    if (paras.length === 0) {
-      (data.lines || []).forEach((l) => paras.push({ text: l.text, bbox: l.bbox }));
-    }
-    return paras
-      .filter((p) => p && p.text && p.text.trim() && p.bbox)
-      .sort((a, b) => a.bbox.y0 - b.bbox.y0 || a.bbox.x0 - b.bbox.x0);
+  // ---------- Image analysis ----------
+  function loadImageEl(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Image failed to load"));
+      img.src = URL.createObjectURL(file);
+    });
   }
 
-  function extractTodos(data) {
-    const paras = getParagraphs(data);
-    if (paras.length === 0) return [];
+  // Finds dark grid lines. vertical=true scans columns, false scans rows.
+  function findGridLines(gray, W, r, vertical) {
+    const hits = [];
+    if (vertical) {
+      for (let x = r.x0; x < r.x1; x++) {
+        let dark = 0;
+        for (let y = r.y0; y < r.y1; y++) if (gray[y * W + x] < 130) dark++;
+        if (dark / (r.y1 - r.y0) > 0.6) hits.push(x);
+      }
+    } else {
+      for (let y = r.y0; y < r.y1; y++) {
+        let dark = 0;
+        for (let x = r.x0; x < r.x1; x++) if (gray[y * W + x] < 130) dark++;
+        if (dark / (r.x1 - r.x0) > 0.6) hits.push(y);
+      }
+    }
+    // Merge neighboring pixels into one line
+    const groups = [];
+    hits.forEach((v) => {
+      const last = groups[groups.length - 1];
+      if (last && v - last.end <= 2) last.end = v;
+      else groups.push({ start: v, end: v });
+    });
+    return groups.map((g) => (g.start + g.end) / 2);
+  }
 
-    const pageWidth = Math.max(...paras.map((p) => p.bbox.x1));
+  // Collect every word with its position from the OCR layout.
+  function collectWords(data) {
+    const words = [];
+    (data.blocks || []).forEach((b) =>
+      (b.paragraphs || []).forEach((p) =>
+        (p.lines || []).forEach((l) =>
+          (l.words || []).forEach((w) => {
+            if (w.text && w.text.trim()) words.push({ text: w.text.trim(), bbox: w.bbox });
+          })
+        )
+      )
+    );
+    return words;
+  }
 
-    // Find the "TO-DO" header and keep only cells centered under it.
-    const header = paras.find((p) => /\bTO[\s-]?DO\b/i.test(p.text));
-    let inColumn = paras;
-    if (header) {
-      const cx = (header.bbox.x0 + header.bbox.x1) / 2;
-      const half = pageWidth * 0.2;
-      inColumn = paras.filter((p) => {
-        const pcx = (p.bbox.x0 + p.bbox.x1) / 2;
-        return Math.abs(pcx - cx) <= half;
-      });
+  async function readTodoList(file, worker, setStatus) {
+    const img = await loadImageEl(file);
+    const W = img.naturalWidth, H = img.naturalHeight;
+    const full = document.createElement("canvas");
+    full.width = W; full.height = H;
+    const fctx = full.getContext("2d");
+    fctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(img.src);
+
+    // Pass 1: find where the "TO-DO" header is.
+    setStatus("Finding the To-Do column...");
+    await worker.setParameters({ tessedit_pageseg_mode: "3" });
+    const pass1 = await worker.recognize(full, {}, { blocks: true, text: true });
+    const words = collectWords(pass1.data);
+    const header = words.find((w) => /TO-?DO/i.test(w.text));
+
+    // No header found: read the whole image as lines and filter out noise.
+    if (!header) {
+      await worker.setParameters({ tessedit_pageseg_mode: "6" });
+      const whole = await worker.recognize(full, {}, { text: true });
+      return whole.data.text.split(/\r?\n/).flatMap((l) => rowToItems(l)).filter((t) => !isNoise(t));
+    }
+
+    // Measure the table's grid lines from the pixels.
+    const px = fctx.getImageData(0, 0, W, H).data;
+    const gray = new Uint8Array(W * H);
+    for (let i = 0, j = 0; i < gray.length; i++, j += 4) {
+      gray[i] = 0.299 * px[j] + 0.587 * px[j + 1] + 0.114 * px[j + 2];
+    }
+
+    const cx = (header.bbox.x0 + header.bbox.x1) / 2;
+    const top = header.bbox.y1 + 4;
+    const vLines = findGridLines(gray, W, { x0: 0, y0: top, x1: W, y1: H }, true);
+    const leftLines = vLines.filter((x) => x < cx);
+    const rightLines = vLines.filter((x) => x > cx);
+    const colLeft = (leftLines.length ? Math.max(...leftLines) : 0) + 4;
+    const colRight = (rightLines.length ? Math.min(...rightLines) : W) - 4;
+    const colW = colRight - colLeft;
+
+    const hLines = findGridLines(gray, W, { x0: colLeft, y0: top, x1: colRight, y1: H }, false);
+    const bounds = [top, ...hLines.filter((y) => y > top), H - 2];
+
+    // Pass 2: read each row of the To-Do column on its own.
+    await worker.setParameters({ tessedit_pageseg_mode: "6" });
+    const rows = [];
+    for (let i = 0; i < bounds.length - 1; i++) {
+      const y0 = Math.round(bounds[i]) + 2, y1 = Math.round(bounds[i + 1]) - 2;
+      if (y1 - y0 < 12) continue;
+      rows.push({ y0, y1 });
     }
 
     const tasks = [];
-    inColumn.forEach((p) => {
-      paragraphToItems(p.text).forEach((item) => {
+    for (let i = 0; i < rows.length; i++) {
+      setStatus(`Reading row ${i + 1} of ${rows.length}...`);
+      const { y0, y1 } = rows[i];
+      const c = document.createElement("canvas");
+      c.width = colW * 2; c.height = (y1 - y0) * 2;
+      const cctx = c.getContext("2d");
+      cctx.fillStyle = "#fff";
+      cctx.fillRect(0, 0, c.width, c.height);
+      cctx.drawImage(full, colLeft, y0, colW, y1 - y0, 0, 0, c.width, c.height);
+      const r = await worker.recognize(c, {}, { text: true });
+      rowToItems(r.data.text).forEach((item) => {
         const clean = cleanText(item);
         if (!isNoise(clean) && !tasks.includes(clean)) tasks.push(clean);
       });
-    });
+    }
     return tasks;
   }
 
@@ -280,39 +365,34 @@ li button.icon { background: transparent; border: none; color: var(--muted); pad
       return;
     }
     extractBtn.disabled = true;
-    status.textContent = "Reading image... this can take a moment.";
+    status.textContent = "Loading the reader (first time can take a while)...";
+    let worker = null;
     try {
-      // The 4th argument asks for the layout (blocks > paragraphs), which lets us find the to-do column.
-      const result = await Tesseract.recognize(
-        file,
-        "eng",
-        {
-          logger: (m) => {
-            if (m.status === "recognizing text") {
-              status.textContent = `Reading image... ${Math.round(m.progress * 100)}%`;
-            }
-          },
+      worker = await Tesseract.createWorker("eng", 1, {
+        logger: (m) => {
+          if (m.status === "recognizing text" && m.progress < 1) {
+            status.textContent = `Reading text... ${Math.round(m.progress * 100)}%`;
+          }
         },
-        { blocks: true, text: true }
-      );
-      const found = extractTodos(result.data);
+      });
+      const found = await readTodoList(file, worker, (msg) => { status.textContent = msg; });
       if (found.length === 0) {
-        status.textContent = "No to-do items found. Try a clearer image or type the tasks below.";
+        status.textContent = "No to-do items found. Try a clearer or larger image, or type the tasks below.";
       } else {
-        // Put the results in the text box so you can review and fix them before adding.
         manualText.value = found.join("\n");
         status.textContent = `Found ${found.length} item(s). Review them below, then click "Add tasks from text".`;
       }
     } catch (err) {
       status.textContent = "Reading failed. Type or paste your tasks below instead.";
     } finally {
+      if (worker) await worker.terminate();
       extractBtn.disabled = false;
     }
   });
 
   // ---------- Manual add ----------
   importBtn.addEventListener("click", () => {
-    const lines = manualText.value.split(/\r?\n/).map((l) => cleanText(stripBullet(l))).filter((l) => l.length > 1);
+    const lines = manualText.value.split(/\r?\n/).map((l) => cleanText(stripLead(l))).filter((l) => l.length > 1);
     if (lines.length === 0) { status.textContent = "Nothing to add. Type one task per line."; return; }
     lines.forEach(addTask);
     manualText.value = "";
@@ -342,6 +422,13 @@ li button.icon { background: transparent; border: none; color: var(--muted); pad
 
   render();
 })();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
