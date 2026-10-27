@@ -52,16 +52,16 @@ body {
   line-height: 1.5;
   padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
 }
-main { max-width: 1400px; margin: 0 auto; padding: 32px clamp(20px, 3vw, 48px) 56px; }
+main { max-width: none; margin: 0; padding: 32px clamp(16px, 2.5vw, 56px) 56px; }
 .layout {
   display: grid;
-  grid-template-columns: minmax(340px, 440px) 1fr;
-  gap: 24px;
+  grid-template-columns: minmax(340px, 28%) 1fr;
+  gap: clamp(16px, 2vw, 32px);
   align-items: start;
 }
 .layout > .card { margin-bottom: 0; }
 .layout > .card:last-child { min-height: calc(100vh - 210px); display: flex; flex-direction: column; }
-.layout > .card:last-child ul { flex: 1; align-content: start; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.layout > .card:last-child ul { flex: 1; align-content: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
 .layout > .card:last-child .row { margin-top: 16px; }
 header.hero { text-align: left; margin-bottom: 28px; }
 h1 { font-size: 2rem; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.02em; color: var(--text); }
@@ -148,6 +148,13 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
 #reminder .row button { background: var(--bg); color: var(--text); }
 #reminder .row button.secondary { background: transparent; color: var(--bg); border-color: var(--bg); }
 
+/* Monochrome line icons (they take the current text color) */
+svg.ico { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; vertical-align: -2px; }
+.chip svg.ico { margin-right: 5px; width: 12px; height: 12px; }
+button svg.ico { margin-right: 6px; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; min-height: 34px; padding: 0; }
+.icon-btn svg.ico { margin: 0; width: 16px; height: 16px; }
+
 /* Phone */
 @media (max-width: 860px) {
   .layout { grid-template-columns: 1fr; gap: 16px; }
@@ -167,6 +174,27 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
   li input[type="checkbox"] { width: 24px; height: 24px; }
   li button.icon { min-width: 44px; min-height: 44px; font-size: 1.2rem; }
   .routine-item .actions { flex-direction: column; }
+}
+
+/* ---------- Fixed panels with inner scrolling (desktop) ---------- */
+.panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 6px; overscroll-behavior: contain; }
+@media (min-width: 861px) {
+  html, body { height: 100%; }
+  body { overflow: hidden; }
+  main { height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; padding-bottom: 24px; }
+  header.hero { flex: none; margin-bottom: 18px; }
+  #reminder { flex: none; }
+  .layout { flex: 1 1 auto; min-height: 0; grid-template-columns: minmax(340px, 28%) 1fr; align-items: stretch; }
+  .stack { min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+  .stack > .card, .layout > .card:last-child {
+    flex: 1 1 0; min-height: 0; margin-bottom: 0; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .layout > .card:last-child { min-height: 0; }
+  #preview { max-height: 28vh; }
+}
+@media (max-width: 860px) {
+  .stack > .card { flex: none; }
+  .panel-body { overflow: visible; }
 }
 </style>
 </head>
@@ -188,9 +216,10 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
   </div>
 
   <div class="layout">
-    <div>
+    <div class="stack">
       <section class="card">
         <h2><span class="dot"></span>Add your schedule</h2>
+<div class="panel-body">
         <input type="file" id="imageInput" accept="image/*">
         <img id="preview" alt="Your schedule">
         <div class="row"><button id="extractBtn" disabled>Read to-do list</button></div>
@@ -208,10 +237,12 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
         <p class="hint" style="margin-top:18px">Or type or paste tasks, one per line:</p>
         <textarea id="manualText" placeholder="Submit report&#10;Call dentist&#10;Buy groceries"></textarea>
         <div class="row"><button id="importBtn" class="secondary">Add tasks from text</button></div>
-      </section>
+      </div>
+</section>
 
       <section class="card">
         <h2><span class="dot"></span>Routines</h2>
+<div class="panel-body">
         <p class="hint">Routines appear on your checklist every day you choose. Sunday is always off.</p>
 
         <label class="field-label" for="routineName">Routine name</label>
@@ -245,11 +276,13 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
           <button id="notifyBtn" class="secondary">Enable notifications</button>
         </div>
         <div class="note">Reminders show in the app once a day at this time. Notifications also need your permission.</div>
-      </section>
+      </div>
+</section>
     </div>
 
     <section class="card">
       <h2><span class="dot"></span>Your checklist</h2>
+<div class="panel-body">
       <p class="hint">Saved in this browser on this device.</p>
       <div class="add-row" style="margin-top:12px">
         <input type="text" id="newTask" placeholder="Add a task...">
@@ -262,7 +295,8 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
         <button id="clearDoneBtn" class="secondary">Remove completed</button>
         <button id="clearAllBtn" class="secondary">Clear all</button>
       </div>
-    </section>
+    </div>
+</section>
   </div>
 </main>
 
@@ -306,6 +340,15 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
   }
   function saveTasks() { write(KEYS.tasks, tasks); }
   function saveRoutines() { write(KEYS.routines, routines); }
+
+  // ---------- Icons (monochrome line icons) ----------
+  const ICON = {
+    calendar: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    clock: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    pen: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+    x: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+    repeat: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>',
+  };
 
   // ---------- Dates ----------
   const pad = (n) => String(n).padStart(2, "0");
@@ -353,10 +396,10 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
   function formatDate(raw) {
     const m = raw.match(/(\d{1,2})\s*[-\/.]\s*(\d{1,2})/);
     if (!m) return "";
-    const month = MONTHS[parseInt(m[1], 10) - 1];
-    if (!month) return "";
+    const month = parseInt(m[1], 10), day = parseInt(m[2], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return "";
     const wd = raw.match(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i);
-    return `${month} ${parseInt(m[2], 10)}${wd ? " · " + wd[1][0].toUpperCase() + wd[1].slice(1).toLowerCase() : ""}`;
+    return `${MONTHS[month - 1]} ${day}${wd ? " · " + wd[1][0].toUpperCase() + wd[1].slice(1).toLowerCase() : ""}`;
   }
   function formatTime(raw) {
     const m = raw.match(/(\d{1,2}:\d{2})\s*([AaPp][Mm])?/);
@@ -430,44 +473,79 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
     return cleanText(r.data.text);
   }
 
+  // Enlarges the screenshot and boosts contrast so small table text reads more reliably.
+  function prepareCanvas(img) {
+    const longest = Math.max(img.naturalWidth, img.naturalHeight);
+    const scale = Math.min(3, Math.max(1, 2400 / longest));
+    const W = Math.round(img.naturalWidth * scale), H = Math.round(img.naturalHeight * scale);
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const ctx = c.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(img, 0, 0, W, H);
+    const data = ctx.getImageData(0, 0, W, H);
+    const d = data.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      const v = Math.max(0, Math.min(255, (g - 128) * 1.5 + 128));
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+    ctx.putImageData(data, 0, 0);
+    return { canvas: c, W, H };
+  }
+
+  // Reads the table: finds the To-Do column, then reads each row's course, date, time and tasks.
   async function readTodoList(file, worker, setStatus) {
     const img = await loadImageEl(file);
-    const W = img.naturalWidth, H = img.naturalHeight;
-    const full = document.createElement("canvas");
-    full.width = W; full.height = H;
-    const fctx = full.getContext("2d");
-    fctx.drawImage(img, 0, 0);
+    const { canvas: full, W, H } = prepareCanvas(img);
     URL.revokeObjectURL(img.src);
+    const fctx = full.getContext("2d");
 
+    // Pass 1: find where the "TO-DO" header is.
     setStatus("Finding the table...");
     await worker.setParameters({ tessedit_pageseg_mode: "3" });
     const pass1 = await worker.recognize(full, {}, { blocks: true, text: true });
-    const header = collectWords(pass1.data).find((w) => /TO-?DO/i.test(w.text));
+    const words = collectWords(pass1.data);
+    const header = words.find((w) => /TO-?DO/i.test(w.text)) || words.find((w) => /^\(?WHAT/i.test(w.text));
 
+    // No header: read the whole image as lines, filtering out noise.
     if (!header) {
+      setStatus("Table header not found. Reading the whole image instead...");
       await worker.setParameters({ tessedit_pageseg_mode: "6" });
       const whole = await worker.recognize(full, {}, { text: true });
       return whole.data.text.split(/\r?\n/).flatMap((l) => rowToItems(l))
         .filter((t) => !isNoise(t)).map((t) => ({ text: t, course: "", date: "", time: "" }));
     }
 
+    // Grid lines from the pixels.
     const px = fctx.getImageData(0, 0, W, H).data;
     const gray = new Uint8Array(W * H);
-    for (let i = 0, j = 0; i < gray.length; i++, j += 4) {
-      gray[i] = 0.299 * px[j] + 0.587 * px[j + 1] + 0.114 * px[j + 2];
-    }
+    for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = px[j];
 
     const cx = (header.bbox.x0 + header.bbox.x1) / 2;
     const top = header.bbox.y1 + 4;
     const vLines = findGridLines(gray, W, { x0: 0, y0: top, x1: W, y1: H }, true);
     const leftLines = vLines.filter((x) => x < cx);
     const rightLines = vLines.filter((x) => x > cx);
-    const colLeft = (leftLines.length ? leftLines[leftLines.length - 1] : 0) + 4;
-    const colRight = (rightLines.length ? rightLines[0] : W) - 4;
+
+    let colLeft, colRight;
+    if (leftLines.length && rightLines.length) {
+      colLeft = leftLines[leftLines.length - 1] + 4;
+      colRight = rightLines[0] - 4;
+    } else {
+      // No clear grid: estimate the column around the header text.
+      const half = Math.max((header.bbox.x1 - header.bbox.x0) * 1.2, W * 0.12);
+      colLeft = Math.max(0, cx - half);
+      colRight = Math.min(W, cx + half);
+    }
     const courseCol = leftLines.length >= 2 ? { x0: leftLines[leftLines.length - 2] + 3, x1: leftLines[leftLines.length - 1] - 3 } : null;
     const dateCol = rightLines.length >= 2 ? { x0: rightLines[0] + 3, x1: rightLines[1] - 3 } : null;
     const timeCol = rightLines.length >= 3 ? { x0: rightLines[1] + 3, x1: rightLines[2] - 3 } : null;
 
+    // Row boundaries
     const hLines = findGridLines(gray, W, { x0: colLeft, y0: top, x1: colRight, y1: H }, false);
     const bounds = [top, ...hLines.filter((y) => y > top), H - 2];
     const rows = [];
@@ -476,10 +554,22 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
       if (y1 - y0 >= 12) rows.push({ y0, y1 });
     }
 
+    await worker.setParameters({ tessedit_pageseg_mode: "6" });
+
+    // No row lines found: read the whole column as one block.
+    if (rows.length === 0) {
+      setStatus("Row lines not found. Reading the column as one block...");
+      const block = await readCell(worker, full, colLeft, colRight, top, H - 2);
+      return rowToItems(block).map(cleanText).filter((t) => !isNoise(t))
+        .map((t) => ({ text: t, course: "", date: "", time: "" }));
+    }
+
+    // Read each row
     const result = [];
     const seen = new Set();
     for (let i = 0; i < rows.length; i++) {
-      setStatus(`Reading row ${i + 1} of ${rows.length}...`);
+      const pct = Math.round((i / rows.length) * 100);
+      setStatus(`Reading row ${i + 1} of ${rows.length} (${pct}%)...`);
       const { y0, y1 } = rows[i];
 
       const todoText = await readCell(worker, full, colLeft, colRight, y0, y1);
@@ -558,7 +648,7 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
       actions.className = "actions";
       const edit = document.createElement("button");
       edit.className = "secondary";
-      edit.textContent = "Edit";
+      edit.innerHTML = ICON.pen + "Edit";
       edit.addEventListener("click", () => startEditRoutine(r.id));
       const del = document.createElement("button");
       del.className = "secondary";
@@ -762,30 +852,17 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
 
     const meta = document.createElement("div");
     meta.className = "meta";
-    if (t.routineName) {
-      const r = document.createElement("span");
-      r.className = "chip routine";
-      r.textContent = "↻ " + t.routineName;
-      meta.appendChild(r);
-    }
-    if (t.course) {
-      const c = document.createElement("span");
-      c.className = "chip course";
-      c.textContent = t.course;
-      meta.appendChild(c);
-    }
-    if (t.date) {
-      const d = document.createElement("span");
-      d.className = "chip";
-      d.textContent = "📅 " + t.date;
-      meta.appendChild(d);
-    }
-    if (t.time) {
-      const tm = document.createElement("span");
-      tm.className = "chip";
-      tm.textContent = "⏰ " + t.time;
-      meta.appendChild(tm);
-    }
+    const addChip = (cls, svg, text) => {
+      const el = document.createElement("span");
+      el.className = cls;
+      if (svg) el.innerHTML = svg;
+      el.appendChild(document.createTextNode(text));
+      meta.appendChild(el);
+    };
+    if (t.routineName) addChip("chip routine", ICON.repeat, t.routineName);
+    if (t.course) addChip("chip course", "", t.course);
+    if (t.date) addChip("chip", ICON.calendar, t.date);
+    if (t.time) addChip("chip", ICON.clock, t.time);
     if (meta.childNodes.length) body.appendChild(meta);
     li.appendChild(body);
     return li;
@@ -801,15 +878,21 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
     }
     tasks.forEach((t) => {
       const li = buildItem(t, { checkable: true, editable: true });
+      const pen = document.createElement("button");
+      pen.className = "icon icon-btn";
+      pen.innerHTML = ICON.pen;
+      pen.setAttribute("aria-label", "Edit task");
+      pen.addEventListener("click", () => editTask(t));
+
       const del = document.createElement("button");
-      del.className = "icon";
-      del.textContent = "✕";
+      del.className = "icon icon-btn";
+      del.innerHTML = ICON.x;
       del.setAttribute("aria-label", "Delete task");
       del.addEventListener("click", () => {
         tasks = tasks.filter((x) => x.id !== t.id);
         saveTasks(); render();
       });
-      li.appendChild(del);
+      li.append(pen, del);
       list.appendChild(li);
     });
 
@@ -880,7 +963,8 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
         status.textContent = "Review the items below, then add them to your checklist.";
       }
     } catch (err) {
-      status.textContent = "Reading failed. Type or paste your tasks below instead.";
+      console.error(err);
+      status.textContent = `Reading failed: ${err && err.message ? err.message : "unknown error"}. Try a clearer image, or type the tasks below.`;
     } finally {
       if (worker) await worker.terminate();
       extractBtn.disabled = false;
