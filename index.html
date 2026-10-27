@@ -7,6 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#111111">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Checklist">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -655,6 +656,11 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
       await Notification.requestPermission();
     } catch (e) { /* ignore */ }
     updateNotifyButton();
+    if (Notification.permission === "granted") {
+      const open = pendingTasks();
+      if (open.length) sendNotification(open);
+      else status.textContent = "Notifications are on. You'll be reminded when you have tasks to do.";
+    }
   });
 
   reminderTime.value = settings.reminderTime || "08:00";
@@ -675,7 +681,7 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
     const open = pendingTasks();
     if (open.length === 0) return;
     reminderTitle.textContent = "Today's checklist";
-    reminderText.textContent = `You have ${open.length} thing${open.length === 1 ? "" : "s"} to do today.`;
+    reminderText.textContent = `You have ${open.length} unchecked task${open.length === 1 ? "" : "s"} to do today.`;
     reminderList.innerHTML = "";
     open.slice(0, 5).forEach((t) => {
       const li = document.createElement("li");
@@ -689,10 +695,30 @@ li button.icon:hover { color: var(--text); background: var(--track); transform: 
     }
     reminderBox.classList.add("show");
 
-    if (notificationsSupported() && Notification.permission === "granted") {
-      try {
-        new Notification("Today's checklist", { body: `${open.length} thing(s) to do today.` });
-      } catch (e) { /* some browsers only allow notifications from a service worker */ }
+    sendNotification(open);
+  }
+
+  // Sends a phone/computer notification with the unchecked count and the first few tasks.
+  function sendNotification(open) {
+    if (!notificationsSupported() || Notification.permission !== "granted") return;
+    const n = open.length;
+    const names = open.slice(0, 3).map((t) => t.text);
+    const more = n > 3 ? ` and ${n - 3} more` : "";
+    const title = n === 1 ? "You have 1 unchecked task" : `You have ${n} unchecked tasks`;
+    const body = `To do today: ${names.join(", ")}${more}.`;
+    const options = {
+      body,
+      tag: "daily-checklist",   // replaces the previous reminder instead of stacking
+      renotify: true,
+      icon: "icons/icon-192.png",
+      badge: "icons/icon-192.png",
+    };
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.ready
+        .then((reg) => reg.showNotification(title, options))
+        .catch(() => { try { new Notification(title, options); } catch (e) { /* not supported here */ } });
+    } else {
+      try { new Notification(title, options); } catch (e) { /* not supported here */ }
     }
   }
 
