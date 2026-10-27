@@ -1,6 +1,6 @@
 // Minimal service worker: caches the app shell so it opens offline after the first visit.
 const CACHE = "schedule-checklist-v1";
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
+const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {
   // Cache each file on its own so one missing file (like an icon) can't stop the service worker from installing.
