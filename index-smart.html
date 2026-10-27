@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Schedule Checklist</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+<style>
+:root {
+  --bg: #f6f5f2; --surface: #ffffff; --text: #1f1f1f; --muted: #6b6b6b;
+  --accent: #2f6fdb; --border: #dedbd3; --done: #9a9a9a; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161616; --surface: #222222; --text: #f2f2f2; --muted: #a0a0a0;
+    --accent: #6fa0ff; --border: #3a3a3a; --done: #777777; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.4; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+main { max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 1.5rem; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 20px; font-size: 0.95rem; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+h2 { font-size: 1.05rem; margin: 0 0 12px; }
+input[type="file"] { width: 100%; }
+#preview { max-width: 100%; border-radius: 8px; margin-top: 12px; display: none; }
+#status { color: var(--muted); font-size: 0.9rem; margin-top: 10px; min-height: 1.2em; }
+textarea {
+  width: 100%; min-height: 110px; padding: 10px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; resize: vertical; margin-top: 10px;
+}
+button {
+  font: inherit; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--accent);
+  background: var(--accent); color: #fff; cursor: pointer;
+}
+button.secondary { background: transparent; color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: default; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.add-row input {
+  flex: 1; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font: inherit;
+}
+.progress { color: var(--muted); font-size: 0.9rem; margin-bottom: 10px; }
+.bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
+.bar > div { height: 100%; background: var(--accent); width: 0%; transition: width 0.2s; }
+ul { list-style: none; padding: 0; margin: 0; }
+li { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+li:last-child { border-bottom: none; }
+li input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--accent); }
+li .label { flex: 1; word-break: break-word; }
+li.done .label { text-decoration: line-through; color: var(--done); }
+li button.icon { background: transparent; border: none; color: var(--muted); padding: 4px 8px; font-size: 1.1rem; }
+.empty { color: var(--muted); font-size: 0.95rem; padding: 8px 0; }
+.hint { color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Schedule Checklist</h1>
+  <p class="sub">Upload a photo or screenshot of your schedule, then check off your tasks.</p>
+
+  <section class="card">
+    <h2>1. Add your schedule</h2>
+    <input type="file" id="imageInput" accept="image/*">
+    <img id="preview" alt="Your schedule">
+    <div class="row"><button id="extractBtn" disabled>Read to-do list from image</button></div>
+    <div id="status"></div>
+    <p class="hint">The reader keeps only the to-do column and skips dates, times, and course codes. Review the result before adding it.</p>
+    <textarea id="manualText" placeholder="e.g.&#10;Submit report&#10;Call dentist&#10;Buy groceries"></textarea>
+    <div class="row"><button id="importBtn" class="secondary">Add tasks from text</button></div>
+  </section>
+
+  <section class="card">
+    <h2>2. Your checklist</h2>
+    <p class="hint" style="margin-top:0">Tasks are saved in this browser on this device.</p>
+    <div class="add-row" style="margin-top:10px">
+      <input type="text" id="newTask" placeholder="Add a task...">
+      <button id="addBtn" class="secondary">Add</button>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div class="bar"><div id="barFill"></div></div>
+    <ul id="list"></ul>
+    <div class="row">
+      <button id="clearDoneBtn" class="secondary">Remove completed</button>
+      <button id="clearAllBtn" class="secondary">Clear all</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const STORAGE_KEY = "schedule-checklist-tasks";
+  const $ = (id) => document.getElementById(id);
+  const imageInput = $("imageInput"), preview = $("preview"), extractBtn = $("extractBtn");
+  const status = $("status"), manualText = $("manualText"), importBtn = $("importBtn");
+  const newTask = $("newTask"), list = $("list"), progress = $("progress"), barFill = $("barFill");
+
+  let tasks = loadTasks();
+  let currentImageUrl = null;
+
+  // ---------- Storage ----------
+  function loadTasks() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) { return []; }
+  }
+  function saveTasks() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+    catch (e) { status.textContent = "Couldn't save on this device. Your list will reset when you close the page."; }
+  }
+
+  // ---------- Text helpers ----------
+  function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function cleanText(s) { return s.replace(/\s+/g, " ").trim(); }
+  function stripBullet(s) {
+    return s.replace(/^[\s\-\*\u2022\u25CF\u25E6\u25AA\u00B7\[\]xX☐☑✓]+(?=\S)/, "").trim();
+  }
+
+  // Lines that are table noise rather than tasks: headers, dates, times, course codes, row numbers.
+  function isNoise(s) {
+    if (s.length < 3) return true;
+    if (/^[\d\W_]+$/.test(s)) return true;                                    // numbers / symbols only
+    if (/^\d{1,2}-\d{1,2}(\s*\(\w{3}\))?$/.test(s)) return true;             // 10-26 (Mon)
+    if (/^\d{1,2}:\d{2}\s*(AM|PM)?$/i.test(s)) return true;                  // 11:59 PM
+    if (/^\(?(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\)?$/i.test(s)) return true;      // weekday only
+    if (/^[A-Z]{2,6}$/.test(s)) return true;                                  // course codes like IAAS
+    if (/ANNOUNCEMENTS|\bAs of\b|^BSIT/i.test(s)) return true;               // page title
+    if (/^(COURSE|CODE|DEADLINE|WHEN|DATE|TIME|WHAT|TO[\s-]?DO|#)\b/i.test(s)) return true; // table headers
+    return false;
+  }
+
+  // ---------- Smart extraction ----------
+  // Turns one OCR paragraph (one table cell) into task strings.
+  function paragraphToItems(text) {
+    const lines = text.split(/\r?\n/).map((l) => cleanText(stripBullet(l))).filter((l) => l.length > 0);
+    if (lines.length === 0) return [];
+
+    // A heading with bullets under it ("Notebook:" then "Week 6 Assignment", ...)
+    if (lines.length > 1 && /:$/.test(lines[0])) {
+      const heading = lines[0].replace(/:$/, "").trim();
+      return lines.slice(1).map((l) => `${heading}: ${l}`);
+    }
+
+    // Otherwise, a new task starts at a numbered code (e.g. "2.5.2.6 ..."); other lines continue it.
+    const items = [];
+    let current = "";
+    for (const l of lines) {
+      if (/^\d+(\.\d+)+\s/.test(l) && current) {
+        items.push(current);
+        current = l;
+      } else {
+        current = current ? `${current} ${l}` : l;
+      }
+    }
+    if (current) items.push(current);
+    return items;
+  }
+
+  // Collect OCR paragraphs (table cells) in reading order.
+  function getParagraphs(data) {
+    const paras = [];
+    (data.blocks || []).forEach((b) => (b.paragraphs || []).forEach((p) => paras.push(p)));
+    if (paras.length === 0) {
+      (data.lines || []).forEach((l) => paras.push({ text: l.text, bbox: l.bbox }));
+    }
+    return paras
+      .filter((p) => p && p.text && p.text.trim() && p.bbox)
+      .sort((a, b) => a.bbox.y0 - b.bbox.y0 || a.bbox.x0 - b.bbox.x0);
+  }
+
+  function extractTodos(data) {
+    const paras = getParagraphs(data);
+    if (paras.length === 0) return [];
+
+    const pageWidth = Math.max(...paras.map((p) => p.bbox.x1));
+
+    // Find the "TO-DO" header and keep only cells centered under it.
+    const header = paras.find((p) => /\bTO[\s-]?DO\b/i.test(p.text));
+    let inColumn = paras;
+    if (header) {
+      const cx = (header.bbox.x0 + header.bbox.x1) / 2;
+      const half = pageWidth * 0.2;
+      inColumn = paras.filter((p) => {
+        const pcx = (p.bbox.x0 + p.bbox.x1) / 2;
+        return Math.abs(pcx - cx) <= half;
+      });
+    }
+
+    const tasks = [];
+    inColumn.forEach((p) => {
+      paragraphToItems(p.text).forEach((item) => {
+        const clean = cleanText(item);
+        if (!isNoise(clean) && !tasks.includes(clean)) tasks.push(clean);
+      });
+    });
+    return tasks;
+  }
+
+  // ---------- Rendering ----------
+  function render() {
+    list.innerHTML = "";
+    if (tasks.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "No tasks yet. Read your schedule or add tasks above.";
+      list.appendChild(empty);
+    }
+    tasks.forEach((t) => {
+      const li = document.createElement("li");
+      if (t.done) li.classList.add("done");
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = t.done;
+      cb.addEventListener("change", () => { t.done = cb.checked; saveTasks(); render(); });
+
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = t.text;
+      label.addEventListener("dblclick", () => editTask(t));
+
+      const del = document.createElement("button");
+      del.className = "icon";
+      del.textContent = "✕";
+      del.setAttribute("aria-label", "Delete task");
+      del.addEventListener("click", () => {
+        tasks = tasks.filter((x) => x.id !== t.id);
+        saveTasks(); render();
+      });
+
+      li.append(cb, label, del);
+      list.appendChild(li);
+    });
+
+    const total = tasks.length;
+    const doneCount = tasks.filter((t) => t.done).length;
+    progress.textContent = total ? `${doneCount} of ${total} done` : "";
+    barFill.style.width = total ? `${(doneCount / total) * 100}%` : "0%";
+  }
+
+  function addTask(text) {
+    const clean = cleanText(text);
+    if (!clean) return;
+    tasks.push({ id: newId(), text: clean, done: false });
+  }
+
+  function editTask(t) {
+    const next = prompt("Edit task:", t.text);
+    if (next === null) return;
+    const clean = cleanText(next);
+    if (clean) t.text = clean;
+    else tasks = tasks.filter((x) => x.id !== t.id);
+    saveTasks(); render();
+  }
+
+  // ---------- Image handling ----------
+  imageInput.addEventListener("change", () => {
+    const file = imageInput.files && imageInput.files[0];
+    if (!file) { preview.style.display = "none"; extractBtn.disabled = true; return; }
+    if (currentImageUrl) URL.revokeObjectURL(currentImageUrl);
+    currentImageUrl = URL.createObjectURL(file);
+    preview.src = currentImageUrl;
+    preview.style.display = "block";
+    extractBtn.disabled = false;
+    status.textContent = "";
+  });
+
+  extractBtn.addEventListener("click", async () => {
+    const file = imageInput.files && imageInput.files[0];
+    if (!file) return;
+    if (typeof Tesseract === "undefined") {
+      status.textContent = "Image reader couldn't load. Type or paste your tasks below instead.";
+      return;
+    }
+    extractBtn.disabled = true;
+    status.textContent = "Reading image... this can take a moment.";
+    try {
+      // The 4th argument asks for the layout (blocks > paragraphs), which lets us find the to-do column.
+      const result = await Tesseract.recognize(
+        file,
+        "eng",
+        {
+          logger: (m) => {
+            if (m.status === "recognizing text") {
+              status.textContent = `Reading image... ${Math.round(m.progress * 100)}%`;
+            }
+          },
+        },
+        { blocks: true, text: true }
+      );
+      const found = extractTodos(result.data);
+      if (found.length === 0) {
+        status.textContent = "No to-do items found. Try a clearer image or type the tasks below.";
+      } else {
+        // Put the results in the text box so you can review and fix them before adding.
+        manualText.value = found.join("\n");
+        status.textContent = `Found ${found.length} item(s). Review them below, then click "Add tasks from text".`;
+      }
+    } catch (err) {
+      status.textContent = "Reading failed. Type or paste your tasks below instead.";
+    } finally {
+      extractBtn.disabled = false;
+    }
+  });
+
+  // ---------- Manual add ----------
+  importBtn.addEventListener("click", () => {
+    const lines = manualText.value.split(/\r?\n/).map((l) => cleanText(stripBullet(l))).filter((l) => l.length > 1);
+    if (lines.length === 0) { status.textContent = "Nothing to add. Type one task per line."; return; }
+    lines.forEach(addTask);
+    manualText.value = "";
+    saveTasks(); render();
+    status.textContent = `Added ${lines.length} task(s).`;
+  });
+
+  function addFromInput() {
+    addTask(newTask.value);
+    newTask.value = "";
+    saveTasks(); render();
+    newTask.focus();
+  }
+  $("addBtn").addEventListener("click", addFromInput);
+  newTask.addEventListener("keydown", (e) => { if (e.key === "Enter") addFromInput(); });
+
+  $("clearDoneBtn").addEventListener("click", () => {
+    tasks = tasks.filter((t) => !t.done);
+    saveTasks(); render();
+  });
+  $("clearAllBtn").addEventListener("click", () => {
+    if (tasks.length && confirm("Clear the whole checklist?")) {
+      tasks = [];
+      saveTasks(); render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
