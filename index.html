@@ -19,6 +19,7 @@
 :root {
   --bg: #f4f4f4;
   --surface: rgba(255, 255, 255, 0.9);
+  --surface-2: rgba(0, 0, 0, 0.025);
   --text: #111111;
   --muted: #6b6b6b;
   --accent: #111111;
@@ -32,6 +33,7 @@
   :root {
     --bg: #121212;
     --surface: rgba(32, 32, 32, 0.9);
+    --surface-2: rgba(255, 255, 255, 0.03);
     --text: #f2f2f2;
     --muted: #9a9a9a;
     --accent: #f2f2f2;
@@ -43,6 +45,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0;
   min-height: 100vh;
@@ -52,158 +55,213 @@ body {
   line-height: 1.5;
   padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
 }
-main { max-width: none; margin: 0; padding: 32px clamp(16px, 2.5vw, 56px) 56px; }
-.layout {
-  display: grid;
-  grid-template-columns: minmax(340px, 28%) 1fr;
-  gap: clamp(16px, 2vw, 32px);
-  align-items: start;
-}
-.layout > .card { margin-bottom: 0; }
-.layout > .card:last-child { min-height: calc(100vh - 210px); display: flex; flex-direction: column; }
-.layout > .card:last-child ul { flex: 1; align-content: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
-.layout > .card:last-child .row { margin-top: 16px; }
-header.hero { text-align: left; margin-bottom: 28px; }
-h1 { font-size: 2rem; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.02em; color: var(--text); }
-.sub { color: var(--muted); margin: 0; font-size: 0.95rem; }
+main { margin: 0; padding: 26px clamp(16px, 2.5vw, 48px) 32px; min-height: 100vh; display: flex; flex-direction: column; }
+header.hero { flex: none; margin-bottom: 18px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-size: 1.9rem; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+.sub { color: var(--muted); margin: 0; font-size: 0.92rem; }
+#status { flex: none; color: var(--muted); font-size: 0.9rem; min-height: 1.3em; margin-bottom: 8px; }
+#reminder { display: none; flex: none; margin-bottom: 16px; padding: 16px 18px; border-radius: 18px; background: var(--text); color: var(--bg); box-shadow: var(--shadow); }
+#reminder.show { display: block; }
+#reminder .r-title { font-weight: 700; margin-bottom: 4px; }
+#reminder ul { margin: 6px 0 0; padding-left: 18px; list-style: disc; display: block; }
+#reminder li { border: none; padding: 0; background: transparent; display: list-item; }
+#reminder .row button { background: var(--bg); color: var(--text); }
+#reminder .row button.secondary { background: transparent; color: var(--bg); border-color: var(--bg); }
+
+/* Layout: left = upload and routines, right = schedule */
+.layout { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(320px, 30%) 1fr; gap: clamp(16px, 2vw, 28px); align-items: stretch; }
+.stack { min-height: 0; display: flex; flex-direction: column; gap: 16px; }
 .card {
   background: var(--surface); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 18px; box-shadow: var(--shadow);
+  border: 1px solid var(--border); border-radius: 20px; padding: 18px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; min-height: 0;
 }
-h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
-h3 { font-size: 0.95rem; font-weight: 600; margin: 18px 0 8px; }
+.card.grow { flex: 1 1 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex: none; }
+h2 { font-size: 1.02rem; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; }
 h2 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text); }
+h3 { font-size: 0.92rem; font-weight: 600; margin: 16px 0 8px; }
+.panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 6px; overscroll-behavior: contain; }
+
 input[type="file"] { width: 100%; font: inherit; color: var(--muted); }
 input[type="file"]::file-selector-button {
   font: inherit; padding: 8px 14px; margin-right: 12px; border-radius: 999px; border: 1px dashed var(--accent);
   background: transparent; color: var(--accent); cursor: pointer;
 }
-#preview { max-width: 100%; max-height: 55vh; width: 100%; object-fit: contain; background: var(--track); border-radius: 14px; margin-top: 14px; display: none; }
-#status { color: var(--muted); font-size: 0.9rem; margin-top: 12px; min-height: 1.3em; }
+#preview { max-width: 100%; max-height: 26vh; width: 100%; object-fit: contain; background: var(--track); border-radius: 14px; margin-top: 12px; display: none; }
 textarea, input[type="text"], input[type="time"] {
-  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 14px;
+  width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 14px;
   background: transparent; color: var(--text); font: inherit;
 }
-textarea { min-height: 96px; resize: vertical; margin-top: 12px; }
+textarea { min-height: 84px; resize: vertical; margin-top: 10px; }
 textarea:focus, input[type="text"]:focus, input[type="time"]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 button {
-  font: inherit; font-weight: 600; padding: 10px 18px; border-radius: 999px; border: none;
+  font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: none;
   background: var(--accent); color: var(--on-accent); cursor: pointer; transition: transform .15s ease, opacity .15s ease;
 }
 button:hover:not(:disabled) { transform: translateY(-1px); }
 button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
 button:disabled { opacity: 0.5; cursor: default; transform: none; }
-.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-.add-row { display: flex; gap: 10px; margin-bottom: 16px; }
-.add-row input { flex: 1; min-width: 0; border-radius: 999px; padding: 11px 16px; }
-.progress { color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; font-weight: 500; }
-.bar { height: 8px; background: var(--track); border-radius: 999px; overflow: hidden; margin-bottom: 16px; }
-.bar > div { height: 100%; width: 0%; border-radius: 999px; background: var(--text); transition: width .3s ease; }
-ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-li {
-  display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 16px;
-  border: 1px solid var(--border); background: transparent; transition: background .15s ease;
-}
-li:hover { background: var(--track); }
-li input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
-.body { flex: 1; min-width: 0; }
-.title { font-weight: 500; word-break: break-word; }
-li.done .title { text-decoration: line-through; color: var(--muted); }
-li.done { opacity: 0.7; }
-.meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.chip { font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; background: var(--track); color: var(--muted); }
-.chip.course { background: var(--text); color: var(--bg); }
-.chip.routine { border: 1px solid var(--border); background: transparent; color: var(--text); }
-li button.icon { background: transparent; border: none; color: var(--muted); padding: 2px 6px; font-size: 1rem; box-shadow: none; border-radius: 8px; }
-li button.icon:hover { color: var(--text); background: var(--track); transform: none; }
-.empty { color: var(--muted); font-size: 0.95rem; padding: 14px 4px; text-align: center; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
 .hint { color: var(--muted); font-size: 0.85rem; margin: 0 0 4px; }
-#pendingWrap { display: none; margin-top: 16px; }
-#pendingWrap.show { display: block; }
-#pendingList li { padding: 12px 14px; }
-.pending-head { color: var(--muted); font-size: 0.9rem; margin-bottom: 10px; }
-
-/* Day picker */
-.days { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-.days button {
-  padding: 8px 12px; min-width: 52px; font-size: 0.85rem; background: transparent; color: var(--text); border: 1px solid var(--border);
-}
-.days button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .note { color: var(--muted); font-size: 0.8rem; margin-top: 8px; }
-.routine-item { align-items: center; }
-.routine-item .body { display: flex; flex-direction: column; gap: 4px; }
-.routine-item .actions { display: flex; gap: 6px; }
-.routine-item .actions button { padding: 6px 12px; font-size: 0.85rem; }
-.field-label { display: block; font-size: 0.85rem; color: var(--muted); margin: 14px 0 6px; }
+.empty { color: var(--muted); font-size: 0.95rem; padding: 18px 4px; text-align: center; }
+.field-label { display: block; font-size: 0.84rem; color: var(--muted); margin: 12px 0 4px; }
+label.check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.9rem; cursor: pointer; }
+label.check input { width: 17px; height: 17px; accent-color: var(--accent); }
 
-/* Reminder banner */
-#reminder {
-  display: none; margin-bottom: 18px; padding: 16px 18px; border-radius: 18px;
-  background: var(--text); color: var(--bg); box-shadow: var(--shadow);
+/* Schedule: one container per subject, course code at the top */
+.add-row { display: flex; gap: 8px; margin-bottom: 8px; flex: none; }
+.add-row input { flex: 1; min-width: 0; border-radius: 999px; padding: 10px 16px; }
+.progress-line { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 4px; font-weight: 500; flex: none; }
+.bar { height: 5px; background: var(--track); border-radius: 999px; overflow: hidden; margin-bottom: 8px; flex: none; }
+.bar > div { height: 100%; width: 0%; border-radius: 999px; background: var(--text); transition: width .3s ease; }
+.subjects { display: flex; flex-direction: column; gap: 14px; }
+.subject { border: 1px solid var(--border); border-radius: 18px; background: var(--surface-2); overflow: hidden; }
+.subject-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
 }
-#reminder.show { display: block; }
-#reminder .r-title { font-weight: 700; margin-bottom: 4px; }
-#reminder ul { margin: 6px 0 0; gap: 4px; padding-left: 18px; list-style: disc; }
-#reminder li { border: none; padding: 0; background: transparent; display: list-item; }
-#reminder .row button { background: var(--bg); color: var(--text); }
-#reminder .row button.secondary { background: transparent; color: var(--bg); border-color: var(--bg); }
+.code {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 56px; padding: 5px 12px;
+  border-radius: 10px; background: var(--text); color: var(--bg); font-weight: 700; letter-spacing: 0.04em; font-size: 0.95rem;
+}
+.code.plain { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.subject-name { font-weight: 600; font-size: 0.95rem; flex: 1; min-width: 0; word-break: break-word; }
+.subject-count { color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+.subject ul { list-style: none; margin: 0; padding: 4px 0; }
+.task {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  padding: 10px 14px; border-top: 1px solid var(--border);
+}
+.subject ul li:first-child .task { border-top: none; }
+.task:hover { background: var(--track); }
+.task input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; margin: 0; }
+.task-main { min-width: 0; }
+.task-text { font-weight: 500; word-break: break-word; }
+.task.done .task-text { text-decoration: line-through; color: var(--muted); }
+.task.done { opacity: 0.65; }
+.task-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.chip { display: inline-flex; align-items: center; font-size: 0.74rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; background: var(--track); color: var(--muted); }
+.chip.routine { border: 1px solid var(--border); background: transparent; color: var(--text); }
+.task-actions { display: flex; gap: 2px; }
+button.icon-btn {
+  background: transparent; border: none; color: var(--muted); box-shadow: none; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center; min-width: 30px; min-height: 30px; padding: 0; transform: none;
+}
+button.icon-btn:hover { color: var(--text); background: var(--track); transform: none; }
+button.text-icon { display: inline-flex; align-items: center; gap: 6px; }
 
-/* Monochrome line icons (they take the current text color) */
+/* Monochrome line icons (they use the current text color) */
 svg.ico { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; vertical-align: -2px; }
 .chip svg.ico { margin-right: 5px; width: 12px; height: 12px; }
-button svg.ico { margin-right: 6px; }
-.icon-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; min-height: 34px; padding: 0; }
-.icon-btn svg.ico { margin: 0; width: 16px; height: 16px; }
+button.icon-btn svg.ico { margin: 0; width: 15px; height: 15px; }
+button.text-icon svg.ico { margin: 0; }
 
-/* Phone */
-@media (max-width: 860px) {
-  .layout { grid-template-columns: 1fr; gap: 16px; }
-  .layout > .card:last-child { min-height: 0; }
-  .layout > .card:last-child ul { grid-template-columns: 1fr; }
-  main { padding: 20px 16px calc(40px + env(safe-area-inset-bottom, 0px)); }
-  h1 { font-size: 1.6rem; }
-  .card { padding: 16px; border-radius: 18px; }
-  #preview { max-height: 45vh; }
-  .row { flex-direction: column; }
-  .row button, .add-row button { width: 100%; }
-  .add-row { flex-direction: column; }
-  .add-row input, textarea, input[type="time"] { font-size: 16px; }
-  button { min-height: 44px; }
-  .days button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 4px; }
-  li { padding: 14px 12px; }
-  li input[type="checkbox"] { width: 24px; height: 24px; }
-  li button.icon { min-width: 44px; min-height: 44px; font-size: 1.2rem; }
-  .routine-item .actions { flex-direction: column; }
+/* Routines */
+.routine-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; }
+.routine-item .r-name { font-weight: 600; }
+.routine-item .meta { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.routine-item .actions { display: flex; gap: 6px; flex-shrink: 0; }
+.routine-item .actions button { padding: 6px 12px; font-size: 0.85rem; }
+.days { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.days button { padding: 7px 11px; min-width: 50px; font-size: 0.83rem; background: transparent; color: var(--text); border: 1px solid var(--border); }
+.days button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+.read-status { color: var(--muted); font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
+
+/* Editable fields (review list and checklist edit form) */
+.pend-row, .edit-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px; border: 1px solid var(--border); border-radius: 12px; }
+.pend-row input, .edit-form input {
+  padding: 7px 10px; border-radius: 10px; font: inherit; font-size: 0.85rem; min-width: 0;
+  border: 1px solid var(--border); background: transparent; color: var(--text);
 }
+.pend-row .f-text, .edit-form .f-text { flex: 1 1 100%; }
+.pend-row .f-small, .edit-form .f-small { flex: 1 1 80px; }
+.edit-form .actions { display: flex; gap: 6px; width: 100%; justify-content: flex-end; }
+.edit-form .actions button { padding: 6px 14px; font-size: 0.85rem; }
+#pendingList { gap: 6px; }
 
-/* ---------- Fixed panels with inner scrolling (desktop) ---------- */
-.panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 6px; overscroll-behavior: contain; }
+/* Pending review */
+#pendingWrap { margin-top: 12px; }
+.pending-head { color: var(--muted); font-size: 0.88rem; margin-bottom: 8px; }
+#pendingList { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+#pendingList li { padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; }
+
+/* Subject buttons on top, sorted activities below */
+.subject-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; flex: none; }
+.subj-btn {
+  background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none;
+  padding: 5px 11px; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px;
+}
+.subj-btn:hover:not(:disabled) { background: var(--track); transform: none; }
+.subj-btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.subj-btn .n { opacity: 0.6; font-weight: 500; }
+.subj-btn[aria-pressed="true"] .n { opacity: 0.8; }
+
+.task-grid { display: flex; flex-direction: column; gap: 6px; }
+.task-card {
+  border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; background: var(--surface-2);
+  display: flex; flex-direction: column; gap: 5px; min-width: 0;
+}
+.task-card:hover { background: var(--track); }
+.task-card.done { opacity: 0.6; }
+.task-card.done .tc-text { text-decoration: line-through; color: var(--muted); }
+.tc-top { display: flex; gap: 8px; align-items: flex-start; }
+.tc-top input[type="checkbox"] { width: 18px; height: 18px; margin-top: 3px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
+.tc-text { flex: 1; min-width: 0; font-weight: 500; font-size: 0.9rem; line-height: 1.3; word-break: break-word; }
+.tc-meta { display: flex; flex-wrap: wrap; gap: 4px; }
+.task-card .task-actions { display: flex; gap: 2px; flex-shrink: 0; }
+
+/* Desktop: the two columns fill the screen and only their contents scroll */
 @media (min-width: 861px) {
   html, body { height: 100%; }
   body { overflow: hidden; }
-  main { height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; padding-bottom: 24px; }
-  header.hero { flex: none; margin-bottom: 18px; }
-  #reminder { flex: none; }
-  .layout { flex: 1 1 auto; min-height: 0; grid-template-columns: minmax(340px, 28%) 1fr; align-items: stretch; }
-  .stack { min-height: 0; display: flex; flex-direction: column; gap: 16px; }
-  .stack > .card, .layout > .card:last-child {
-    flex: 1 1 0; min-height: 0; margin-bottom: 0; display: flex; flex-direction: column; overflow: hidden;
-  }
-  .layout > .card:last-child { min-height: 0; }
-  #preview { max-height: 28vh; }
+  main { height: 100vh; box-sizing: border-box; }
+  .layout { min-height: 0; }
+  .stack { min-height: 0; }
+  .stack > .card { flex: 1 1 0; min-height: 0; overflow: hidden; }
+  .schedule-card { flex: 1 1 0; min-height: 0; overflow: hidden; }
+  .schedule-card .panel-body { overflow-y: auto; }
 }
+
+/* Phone: one column, the page scrolls normally */
 @media (max-width: 860px) {
-  .stack > .card { flex: none; }
+  .task-grid { gap: 6px; }
+  .subj-btn { min-height: 40px; }
+}
+/* Phone: one column, the page scrolls normally (other rules) */
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  main { height: auto; min-height: 100vh; padding: 18px 14px calc(36px + env(safe-area-inset-bottom, 0px)); }
+  h1 { font-size: 1.6rem; }
+  .layout { grid-template-columns: 1fr; }
+  .stack > .card, .schedule-card { flex: none; overflow: visible; }
   .panel-body { overflow: visible; }
+  .card { padding: 14px; border-radius: 18px; }
+  .add-row { flex-direction: column; }
+  .add-row button, .row button { width: 100%; }
+  .row { flex-direction: column; align-items: stretch; }
+  .add-row input, textarea, input[type="time"] { font-size: 16px; }
+  button { min-height: 44px; }
+  .days button { flex: 1 1 0; min-width: 0; min-height: 44px; }
+  .task { padding: 12px; }
+  .task input[type="checkbox"] { width: 22px; height: 22px; }
+  button.icon-btn { min-width: 40px; min-height: 40px; }
+  .routine-item { flex-direction: column; align-items: stretch; }
 }
 </style>
 </head>
 <body>
 <main>
   <header class="hero">
-    <h1>Schedule Checklist</h1>
-    <p class="sub">Snap your schedule, set your routines, then check things off.</p>
+    <div>
+      <h1>Schedule Checklist</h1>
+      <p class="sub">Read your schedule, and check off what's due.</p>
+    </div>
   </header>
+
+  <div id="status" role="status" aria-live="polite"></div>
 
   <div id="reminder" role="status" aria-live="polite">
     <div class="r-title" id="reminderTitle"></div>
@@ -211,92 +269,90 @@ button svg.ico { margin-right: 6px; }
     <ul id="reminderList"></ul>
     <div class="row">
       <button id="reminderOk">Got it</button>
-      <button id="reminderGo" class="secondary">Open checklist</button>
     </div>
   </div>
 
   <div class="layout">
+    <!-- Left: upload the schedule and manage routines -->
     <div class="stack">
-      <section class="card">
-        <h2><span class="dot"></span>Add your schedule</h2>
-<div class="panel-body">
-        <input type="file" id="imageInput" accept="image/*">
-        <img id="preview" alt="Your schedule">
-        <div class="row"><button id="extractBtn" disabled>Read to-do list</button></div>
-        <div id="status"></div>
+      <section class="card grow">
+        <div class="card-head"><h2><span class="dot"></span>Upload schedule</h2></div>
+        <div class="panel-body">
+          <p class="hint">Upload a screenshot of your schedule. Tasks are added under their course codes automatically.</p>
+          <input type="file" id="imageInput" accept="image/*" style="margin-top:10px">
+          <img id="preview" alt="Your schedule">
+          <div class="row"><button id="extractBtn" disabled>Read schedule</button></div>
+          <div class="read-status" id="readStatus" role="status" aria-live="polite"></div>
+          <label class="check"><input type="checkbox" id="reviewMode"> Review items before adding</label>
 
-        <div id="pendingWrap">
-          <div class="pending-head" id="pendingCount"></div>
-          <ul id="pendingList"></ul>
-          <div class="row">
-            <button id="addPendingBtn">Add all to checklist</button>
-            <button id="discardPendingBtn" class="secondary">Discard</button>
+          <div id="pendingWrap" hidden>
+            <div class="pending-head" id="pendingCount"></div>
+            <ul id="pendingList"></ul>
+            <div class="row">
+              <button id="addPendingBtn">Add all</button>
+              <button id="discardPendingBtn" class="secondary">Discard</button>
+            </div>
           </div>
+
+          <h3>Or type tasks</h3>
+          <p class="hint">One per line. To set the course, date and time, use: <b>IAAS | Task name | Oct 28 · Wed | 11:59 PM</b>. Lines without a course go under General.</p>
+          <textarea id="manualText" placeholder="Submit report&#10;Call dentist&#10;Buy groceries"></textarea>
+          <div class="row"><button id="importBtn" class="secondary">Add tasks</button></div>
         </div>
+      </section>
 
-        <p class="hint" style="margin-top:18px">Or type or paste tasks, one per line:</p>
-        <textarea id="manualText" placeholder="Submit report&#10;Call dentist&#10;Buy groceries"></textarea>
-        <div class="row"><button id="importBtn" class="secondary">Add tasks from text</button></div>
-      </div>
-</section>
+      <section class="card grow">
+        <div class="card-head"><h2><span class="dot"></span>Routines</h2></div>
+        <div class="panel-body">
+          <p class="hint">Shows on your checklist on the days you pick. Sunday is always off.</p>
+          <div id="routineList" style="margin-top:10px"></div>
 
-      <section class="card">
-        <h2><span class="dot"></span>Routines</h2>
-<div class="panel-body">
-        <p class="hint">Routines appear on your checklist every day you choose. Sunday is always off.</p>
+          <label class="field-label" for="routineName">Routine name</label>
+          <input type="text" id="routineName" placeholder="Morning routine">
+          <label class="field-label" for="routineItems">Steps (one per line)</label>
+          <textarea id="routineItems" placeholder="Brush teeth&#10;Drink water&#10;Stretch 5 min"></textarea>
+          <label class="field-label">Days</label>
+          <div class="days" id="dayPicker">
+            <button type="button" data-day="1" aria-pressed="true">Mon</button>
+            <button type="button" data-day="2" aria-pressed="true">Tue</button>
+            <button type="button" data-day="3" aria-pressed="true">Wed</button>
+            <button type="button" data-day="4" aria-pressed="true">Thu</button>
+            <button type="button" data-day="5" aria-pressed="true">Fri</button>
+            <button type="button" data-day="6" aria-pressed="true">Sat</button>
+          </div>
+          <div class="row">
+            <button id="saveRoutineBtn">Save routine</button>
+            <button id="cancelEditBtn" class="secondary" hidden>Cancel</button>
+          </div>
 
-        <label class="field-label" for="routineName">Routine name</label>
-        <input type="text" id="routineName" placeholder="Morning routine">
-
-        <label class="field-label" for="routineItems">Steps (one per line)</label>
-        <textarea id="routineItems" placeholder="Brush teeth&#10;Drink water&#10;Stretch 5 min"></textarea>
-
-        <label class="field-label">Days</label>
-        <div class="days" id="dayPicker">
-          <button type="button" data-day="1" aria-pressed="true">Mon</button>
-          <button type="button" data-day="2" aria-pressed="true">Tue</button>
-          <button type="button" data-day="3" aria-pressed="true">Wed</button>
-          <button type="button" data-day="4" aria-pressed="true">Thu</button>
-          <button type="button" data-day="5" aria-pressed="true">Fri</button>
-          <button type="button" data-day="6" aria-pressed="true">Sat</button>
+          <h3>Daily reminder</h3>
+          <div class="row">
+            <input type="time" id="reminderTime" style="max-width:170px">
+            <button id="notifyBtn" class="secondary">Enable notifications</button>
+          </div>
+          <div class="note">The reminder shows once a day after this time, while the app is open.</div>
         </div>
-        <div class="note">Sunday is always off.</div>
-
-        <div class="row">
-          <button id="saveRoutineBtn">Save routine</button>
-          <button id="cancelEditBtn" class="secondary" style="display:none">Cancel edit</button>
-        </div>
-
-        <h3>Your routines</h3>
-        <ul id="routineList"></ul>
-
-        <h3>Daily reminder</h3>
-        <div class="row" style="align-items:center">
-          <input type="time" id="reminderTime" style="max-width:180px">
-          <button id="notifyBtn" class="secondary">Enable notifications</button>
-        </div>
-        <div class="note">Reminders show in the app once a day at this time. Notifications also need your permission.</div>
-      </div>
-</section>
+      </section>
     </div>
 
-    <section class="card">
-      <h2><span class="dot"></span>Your checklist</h2>
-<div class="panel-body">
-      <p class="hint">Saved in this browser on this device.</p>
-      <div class="add-row" style="margin-top:12px">
+    <!-- Right: the schedule, one container per course code -->
+    <section class="card schedule-card">
+      <div class="card-head"><h2><span class="dot"></span>Your schedule</h2></div>
+      <div class="add-row">
         <input type="text" id="newTask" placeholder="Add a task...">
         <button id="addBtn" class="secondary">Add</button>
       </div>
-      <div class="progress" id="progress"></div>
+      <div class="progress-line"><span id="progress"></span></div>
       <div class="bar"><div id="barFill"></div></div>
-      <ul id="list"></ul>
-      <div class="row">
-        <button id="clearDoneBtn" class="secondary">Remove completed</button>
-        <button id="clearAllBtn" class="secondary">Clear all</button>
+      <div class="panel-body">
+        <div class="subject-bar" id="subjectBar" role="group" aria-label="Subjects"></div>
+        <div class="task-grid" id="subjects"></div>
+        <div class="row">
+          <button id="clearDoneBtn" class="secondary">Remove completed</button>
+          <button id="clearAllBtn" class="secondary">Clear all</button>
+        </div>
       </div>
-    </div>
-</section>
+    </section>
   </div>
 </main>
 
@@ -311,8 +367,9 @@ button svg.ico { margin-right: 6px; }
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const $ = (id) => document.getElementById(id);
   const imageInput = $("imageInput"), preview = $("preview"), extractBtn = $("extractBtn");
-  const status = $("status"), manualText = $("manualText"), importBtn = $("importBtn");
-  const newTask = $("newTask"), list = $("list"), progress = $("progress"), barFill = $("barFill");
+  const status = $("status"), manualText = $("manualText"), importBtn = $("importBtn"), reviewMode = $("reviewMode");
+  const readStatus = $("readStatus");
+  const newTask = $("newTask"), subjectsEl = $("subjects"), progress = $("progress"), barFill = $("barFill");
   const pendingWrap = $("pendingWrap"), pendingList = $("pendingList"), pendingCount = $("pendingCount");
   const reminderBox = $("reminder"), reminderTitle = $("reminderTitle"), reminderText = $("reminderText"), reminderList = $("reminderList");
   const routineName = $("routineName"), routineItems = $("routineItems"), routineList = $("routineList");
@@ -321,25 +378,13 @@ button svg.ico { margin-right: 6px; }
 
   let tasks = read(KEYS.tasks, []);       // { id, text, done, course, date, time, routineId?, routineName?, dayKey? }
   let routines = read(KEYS.routines, []); // { id, name, items: [], days: [1..6] }
-  let settings = read(KEYS.settings, { reminderTime: "08:00" });
-  let pending = [];                       // items read from the image, waiting for review
+  let settings = Object.assign({ reminderTime: "08:00", subjectNames: {} }, read(KEYS.settings, {}));
+  let pending = [];
   let editingRoutineId = null;
   let selectedDays = new Set([1, 2, 3, 4, 5, 6]); // Sunday (0) is never selectable
   let currentImageUrl = null;
-
-  // ---------- Storage ----------
-  function read(key, fallback) {
-    try {
-      const v = JSON.parse(localStorage.getItem(key));
-      return v === null || v === undefined ? fallback : v;
-    } catch (e) { return fallback; }
-  }
-  function write(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); }
-    catch (e) { status.textContent = "Couldn't save on this device. Your changes may reset when you close the page."; }
-  }
-  function saveTasks() { write(KEYS.tasks, tasks); }
-  function saveRoutines() { write(KEYS.routines, routines); }
+  let activeSubject = "ALL";
+  let editingTaskId = null;  // "ALL", a course code, "ROUTINE" or "GEN"
 
   // ---------- Icons (monochrome line icons) ----------
   const ICON = {
@@ -350,9 +395,45 @@ button svg.ico { margin-right: 6px; }
     repeat: '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>',
   };
 
+  // ---------- Storage ----------
+  function read(key, fallback) {
+    try {
+      const v = JSON.parse(localStorage.getItem(key));
+      return v === null || v === undefined ? fallback : v;
+    } catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); }
+    catch (e) { setStatus("Couldn't save on this device. Your changes may reset when you close the page."); }
+  }
+  function saveTasks() { write(KEYS.tasks, tasks); }
+  function saveRoutines() { write(KEYS.routines, routines); }
+  function saveSettings() { write(KEYS.settings, settings); }
+  function setStatus(msg) { status.textContent = msg; }
+
   // ---------- Dates ----------
   const pad = (n) => String(n).padStart(2, "0");
   function todayKey(d = new Date()) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+
+  // "Oct 28 · Wed" becomes a sortable number (month then day); "11:59 PM" becomes minutes.
+  function dateKey(t) {
+    const m = (t.date || "").match(/^([A-Za-z]{3})\s+(\d{1,2})/);
+    if (!m) return Number.MAX_SAFE_INTEGER;
+    const mi = MONTHS.findIndex((x) => x.toLowerCase() === m[1].toLowerCase());
+    return mi < 0 ? Number.MAX_SAFE_INTEGER : mi * 40 + parseInt(m[2], 10);
+  }
+  function timeKey(t) {
+    const m = (t.time || "").match(/(\d{1,2}):(\d{2})\s*([AaPp][Mm])?/);
+    if (!m) return Number.MAX_SAFE_INTEGER;
+    let h = parseInt(m[1], 10);
+    const ap = (m[3] || "").toLowerCase();
+    if (ap === "pm" && h < 12) h += 12;
+    if (ap === "am" && h === 12) h = 0;
+    return h * 60 + parseInt(m[2], 10);
+  }
+  function byDeadline(a, b) {
+    return dateKey(a) - dateKey(b) || timeKey(a) - timeKey(b) || a.text.localeCompare(b.text);
+  }
 
   // ---------- Text helpers ----------
   function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -373,7 +454,9 @@ button svg.ico { margin-right: 6px; }
   }
 
   function rowToItems(text) {
-    const lines = text.split(/\r?\n/).map((l) => cleanText(stripLead(l))).filter((l) => l.length > 0);
+    const lines = text.split(/\r?\n/)
+      .map((l) => cleanText(stripLead(l)).replace(/^[eo°*]\s+(?=[A-Z0-9])/, ""))
+      .filter((l) => l.length > 0);
     if (lines.length === 0) return [];
     if (lines.length > 1 && /:$/.test(lines[0])) {
       const heading = lines[0].replace(/:$/, "").trim();
@@ -412,12 +495,73 @@ button svg.ico { margin-right: 6px; }
     return cleanText(raw).slice(0, 8);
   }
 
+  // ---------- Word correction ----------
+  // Words that often appear in these schedules. Your own task words are added to this list as well.
+  const BASE_WORDS = [
+    "Packet", "Tracer", "Communicating", "Cyber", "World", "Presentation", "Prototype", "Students", "Few",
+    "Accomplish", "Online", "Faculty", "Evaluation", "Long", "Quiz", "CodeChum", "Lesson", "Cisco", "NetAcad",
+    "Networking", "Basics", "Exploring", "File", "Data", "Encryption", "Using", "Integrity", "Checks", "Canvas",
+    "Midterm", "Certification", "Questionnaire", "Reviewer", "Module", "Notebook", "Week", "Assignment",
+    "Introduction", "Cybersecurity", "Defense", "Quiz", "Activity", "Project", "Report", "Exam", "Lab",
+  ];
+  const SHORT_OK = new Set(["a", "i", "of", "to", "in", "on", "at", "by", "is", "or", "an", "it", "as", "be", "vs"]);
+
+  function vocabulary() {
+    const set = new Map();
+    BASE_WORDS.forEach((w) => set.set(w.toLowerCase(), w));
+    tasks.forEach((t) => (t.text || "").split(/[^A-Za-z]+/).forEach((w) => {
+      if (w.length >= 4 && !set.has(w.toLowerCase())) set.set(w.toLowerCase(), w);
+    }));
+    return [...set.values()];
+  }
+
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    let prev = Array.from({ length: n + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[n];
+  }
+
+  // Replaces a misread word with its closest known word, only when the match is clear.
+  function fixWord(word, vocab) {
+    if (word.length < 4 || !/^[A-Za-z]+$/.test(word)) return word;
+    const lower = word.toLowerCase();
+    const exact = vocab.find((v) => v.toLowerCase() === lower);
+    if (exact) return exact;
+    const limit = word.length <= 5 ? 1 : 2;
+    let best = null, bestDist = Infinity, ties = 0;
+    vocab.forEach((v) => {
+      if (Math.abs(v.length - word.length) > limit) return;
+      const d = levenshtein(lower, v.toLowerCase());
+      if (d < bestDist) { best = v; bestDist = d; ties = 1; }
+      else if (d === bestDist) ties++;
+    });
+    return best && bestDist <= limit && ties === 1 ? best : word;
+  }
+
+  // Drops stray one- and two-letter fragments and corrects the rest of the words.
+  function cleanWords(text) {
+    const vocab = vocabulary();
+    return text.split(" ")
+      .filter((tok) => !(/^[A-Za-z]{1,2}$/.test(tok) && !SHORT_OK.has(tok.toLowerCase())))
+      .map((tok) => fixWord(tok, vocab))
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   // ---------- Image analysis ----------
   function loadImageEl(file) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Image failed to load"));
+      img.onerror = () => reject(new Error("the image failed to load"));
       img.src = URL.createObjectURL(file);
     });
   }
@@ -460,19 +604,6 @@ button svg.ico { margin-right: 6px; }
     return words;
   }
 
-  async function readCell(worker, full, x0, x1, y0, y1) {
-    const w = Math.round(x1 - x0), h = Math.round(y1 - y0);
-    if (w < 10 || h < 10) return "";
-    const c = document.createElement("canvas");
-    c.width = w * 2; c.height = h * 2;
-    const cc = c.getContext("2d");
-    cc.fillStyle = "#fff";
-    cc.fillRect(0, 0, c.width, c.height);
-    cc.drawImage(full, x0, y0, w, h, 0, 0, c.width, c.height);
-    const r = await worker.recognize(c, {}, { text: true });
-    return cleanText(r.data.text);
-  }
-
   // Enlarges the screenshot and boosts contrast so small table text reads more reliably.
   function prepareCanvas(img) {
     const longest = Math.max(img.naturalWidth, img.naturalHeight);
@@ -490,37 +621,101 @@ button svg.ico { margin-right: 6px; }
     const d = data.data;
     for (let i = 0; i < d.length; i += 4) {
       const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-      const v = Math.max(0, Math.min(255, (g - 128) * 1.5 + 128));
+      const v = Math.max(0, Math.min(255, (g - 128) * 1.3 + 128));
       d[i] = d[i + 1] = d[i + 2] = v;
     }
     ctx.putImageData(data, 0, 0);
     return { canvas: c, W, H };
   }
 
+  // Finds the y-position of every course code in a column. Each row has one, so they mark the rows.
+  async function findRowAnchors(worker, full, x0, x1, y0, y1) {
+    const w = Math.round(x1 - x0), h = Math.round(y1 - y0);
+    if (w < 10 || h < 10) return [];
+    const c = document.createElement("canvas");
+    c.width = w * 2; c.height = h * 2;
+    const cc = c.getContext("2d");
+    cc.fillStyle = "#fff";
+    cc.fillRect(0, 0, c.width, c.height);
+    cc.drawImage(full, x0, y0, w, h, 0, 0, c.width, c.height);
+    const r = await worker.recognize(c, {}, { blocks: true, text: true });
+    const ys = collectWords(r.data)
+      .filter((word) => /^[A-Z]{2,6}$/.test(word.text))
+      .map((word) => y0 + (word.bbox.y0 + word.bbox.y1) / 4)
+      .sort((a, b) => a - b);
+    // Drop duplicates that come from the same line
+    return ys.filter((y, i) => i === 0 || y - ys[i - 1] > 10);
+  }
+
+  // Turns a cell into pure black and white, choosing the threshold automatically (Otsu's method).
+  function binarize(ctx, w, h) {
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    const hist = new Array(256).fill(0);
+    for (let i = 0; i < d.length; i += 4) hist[d[i]]++;
+    const total = w * h;
+    let sum = 0;
+    for (let t = 0; t < 256; t++) sum += t * hist[t];
+    let sumB = 0, wB = 0, best = 0, threshold = 128;
+    for (let t = 0; t < 256; t++) {
+      wB += hist[t];
+      if (!wB) continue;
+      const wF = total - wB;
+      if (!wF) break;
+      sumB += t * hist[t];
+      const mB = sumB / wB, mF = (sum - sumB) / wF;
+      const between = wB * wF * (mB - mF) * (mB - mF);
+      if (between > best) { best = between; threshold = t; }
+    }
+    for (let i = 0; i < d.length; i += 4) {
+      const v = d[i] > threshold ? 255 : 0;
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  // Reads one table cell. Table lines inside the cell are painted white first so they aren't read as letters.
+  // Returns the text and Tesseract's confidence (0-100).
+  async function readCell(worker, full, x0, x1, y0, y1, grid) {
+    const w = Math.round(x1 - x0), h = Math.round(y1 - y0);
+    if (w < 10 || h < 10) return { text: "", conf: 0 };
+    const c = document.createElement("canvas");
+    c.width = w * 2; c.height = h * 2;
+    const cc = c.getContext("2d");
+    cc.fillStyle = "#fff";
+    cc.fillRect(0, 0, c.width, c.height);
+    cc.drawImage(full, x0, y0, w, h, 0, 0, c.width, c.height);
+    if (grid) {
+      cc.fillStyle = "#fff";
+      grid.v.forEach((x) => { if (x > x0 - 4 && x < x1 + 4) cc.fillRect((x - x0) * 2 - 10, 0, 20, c.height); });
+      grid.h.forEach((y) => { if (y > y0 - 4 && y < y1 + 4) cc.fillRect(0, (y - y0) * 2 - 10, c.width, 20); });
+    }
+    binarize(cc, c.width, c.height);
+    const r = await worker.recognize(c, {}, { text: true });
+    return { text: cleanText(r.data.text), conf: r.data.confidence || 0 };
+  }
+
   // Reads the table: finds the To-Do column, then reads each row's course, date, time and tasks.
-  async function readTodoList(file, worker, setStatus) {
+  async function readTodoList(file, worker, report) {
     const img = await loadImageEl(file);
     const { canvas: full, W, H } = prepareCanvas(img);
     URL.revokeObjectURL(img.src);
     const fctx = full.getContext("2d");
 
-    // Pass 1: find where the "TO-DO" header is.
-    setStatus("Finding the table...");
+    report("Finding the table...");
     await worker.setParameters({ tessedit_pageseg_mode: "3" });
     const pass1 = await worker.recognize(full, {}, { blocks: true, text: true });
     const words = collectWords(pass1.data);
     const header = words.find((w) => /TO-?DO/i.test(w.text)) || words.find((w) => /^\(?WHAT/i.test(w.text));
 
-    // No header: read the whole image as lines, filtering out noise.
     if (!header) {
-      setStatus("Table header not found. Reading the whole image instead...");
+      report("Table header not found. Reading the whole image instead...");
       await worker.setParameters({ tessedit_pageseg_mode: "6" });
       const whole = await worker.recognize(full, {}, { text: true });
       return whole.data.text.split(/\r?\n/).flatMap((l) => rowToItems(l))
         .filter((t) => !isNoise(t)).map((t) => ({ text: t, course: "", date: "", time: "" }));
     }
 
-    // Grid lines from the pixels.
     const px = fctx.getImageData(0, 0, W, H).data;
     const gray = new Uint8Array(W * H);
     for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = px[j];
@@ -536,7 +731,6 @@ button svg.ico { margin-right: 6px; }
       colLeft = leftLines[leftLines.length - 1] + 4;
       colRight = rightLines[0] - 4;
     } else {
-      // No clear grid: estimate the column around the header text.
       const half = Math.max((header.bbox.x1 - header.bbox.x0) * 1.2, W * 0.12);
       colLeft = Math.max(0, cx - half);
       colRight = Math.min(W, cx + half);
@@ -545,10 +739,9 @@ button svg.ico { margin-right: 6px; }
     const dateCol = rightLines.length >= 2 ? { x0: rightLines[0] + 3, x1: rightLines[1] - 3 } : null;
     const timeCol = rightLines.length >= 3 ? { x0: rightLines[1] + 3, x1: rightLines[2] - 3 } : null;
 
-    // Row boundaries
     const hLines = findGridLines(gray, W, { x0: colLeft, y0: top, x1: colRight, y1: H }, false);
     const bounds = [top, ...hLines.filter((y) => y > top), H - 2];
-    const rows = [];
+    let rows = [];
     for (let i = 0; i < bounds.length - 1; i++) {
       const y0 = Math.round(bounds[i]) + 2, y1 = Math.round(bounds[i + 1]) - 2;
       if (y1 - y0 >= 12) rows.push({ y0, y1 });
@@ -556,35 +749,54 @@ button svg.ico { margin-right: 6px; }
 
     await worker.setParameters({ tessedit_pageseg_mode: "6" });
 
-    // No row lines found: read the whole column as one block.
-    if (rows.length === 0) {
-      setStatus("Row lines not found. Reading the column as one block...");
-      const block = await readCell(worker, full, colLeft, colRight, top, H - 2);
-      return rowToItems(block).map(cleanText).filter((t) => !isNoise(t))
-        .map((t) => ({ text: t, course: "", date: "", time: "" }));
+    // If the row lines weren't found (the table became one big row), split the column at each course code.
+    if (courseCol) {
+      const anchors = await findRowAnchors(worker, full, courseCol.x0, courseCol.x1, top, H - 2);
+      if (anchors.length >= 2 && rows.length < anchors.length) {
+        report(`Found ${anchors.length} rows from the course codes...`);
+        rows = [];
+        anchors.forEach((y, i) => {
+          const start = i === 0 ? top : (anchors[i - 1] + y) / 2;
+          const end = i === anchors.length - 1 ? H - 2 : (y + anchors[i + 1]) / 2;
+          const y0 = Math.round(start) + 2, y1 = Math.round(end) - 2;
+          if (y1 - y0 >= 12) rows.push({ y0, y1 });
+        });
+      }
     }
 
-    // Read each row
+    if (rows.length === 0) {
+      report("Row lines not found. Reading the column as one block...");
+      const block = await readCell(worker, full, colLeft, colRight, top, H - 2, { v: vLines, h: [] });
+      return rowToItems(block.text).map((t) => cleanWords(cleanText(t))).filter((t) => !isNoise(t))
+        .map((t) => ({ text: t, course: "", date: "", time: "", check: block.conf < 65 }));
+    }
+
     const result = [];
     const seen = new Set();
     for (let i = 0; i < rows.length; i++) {
       const pct = Math.round((i / rows.length) * 100);
-      setStatus(`Reading row ${i + 1} of ${rows.length} (${pct}%)...`);
+      report(`Reading row ${i + 1} of ${rows.length} (${pct}%)...`);
       const { y0, y1 } = rows[i];
 
-      const todoText = await readCell(worker, full, colLeft, colRight, y0, y1);
-      const items = rowToItems(todoText).map(cleanText).filter((t) => !isNoise(t));
+      const grid = { v: vLines, h: hLines };
+      const todo = await readCell(worker, full, colLeft, colRight, y0, y1, grid);
+      const items = rowToItems(todo.text).map((t) => cleanWords(cleanText(t))).filter((t) => !isNoise(t));
       if (items.length === 0) continue;
 
-      const course = courseCol ? formatCourse(await readCell(worker, full, courseCol.x0, courseCol.x1, y0, y1)) : "";
-      const date = dateCol ? formatDate(await readCell(worker, full, dateCol.x0, dateCol.x1, y0, y1)) : "";
-      const time = timeCol ? formatTime(await readCell(worker, full, timeCol.x0, timeCol.x1, y0, y1)) : "";
+      const courseRaw = courseCol ? (await readCell(worker, full, courseCol.x0, courseCol.x1, y0, y1, grid)).text : "";
+      const dateRaw = dateCol ? (await readCell(worker, full, dateCol.x0, dateCol.x1, y0, y1, grid)).text : "";
+      const timeRaw = timeCol ? (await readCell(worker, full, timeCol.x0, timeCol.x1, y0, y1, grid)).text : "";
+      const course = formatCourse(courseRaw);
+      const date = formatDate(dateRaw);
+      const time = formatTime(timeRaw);
+      // Tesseract is unsure about this cell, so the items are marked for a check
+      const check = todo.conf < 65;
 
       items.forEach((text) => {
         const key = text.toLowerCase();
         if (seen.has(key)) return;
         seen.add(key);
-        result.push({ text, course, date, time });
+        result.push({ text, course, date, time, check });
       });
     }
     return result;
@@ -625,14 +837,13 @@ button svg.ico { margin-right: 6px; }
       return;
     }
     routines.forEach((r) => {
-      const li = document.createElement("li");
-      li.className = "routine-item";
+      const row = document.createElement("div");
+      row.className = "routine-item";
 
       const body = document.createElement("div");
-      body.className = "body";
-      const title = document.createElement("div");
-      title.className = "title";
-      title.textContent = r.name;
+      const name = document.createElement("div");
+      name.className = "r-name";
+      name.textContent = r.name;
       const meta = document.createElement("div");
       meta.className = "meta";
       const days = document.createElement("span");
@@ -642,13 +853,13 @@ button svg.ico { margin-right: 6px; }
       count.className = "chip";
       count.textContent = `${r.items.length} step${r.items.length === 1 ? "" : "s"}`;
       meta.append(days, count);
-      body.append(title, meta);
+      body.append(name, meta);
 
       const actions = document.createElement("div");
       actions.className = "actions";
       const edit = document.createElement("button");
-      edit.className = "secondary";
-      edit.innerHTML = ICON.pen + "Edit";
+      edit.className = "secondary text-icon";
+      edit.innerHTML = ICON.pen + "<span>Edit</span>";
       edit.addEventListener("click", () => startEditRoutine(r.id));
       const del = document.createElement("button");
       del.className = "secondary";
@@ -656,8 +867,8 @@ button svg.ico { margin-right: 6px; }
       del.addEventListener("click", () => deleteRoutine(r.id));
       actions.append(edit, del);
 
-      li.append(body, actions);
-      routineList.appendChild(li);
+      row.append(body, actions);
+      routineList.appendChild(row);
     });
   }
 
@@ -682,7 +893,7 @@ button svg.ico { margin-right: 6px; }
     routineItems.value = "";
     setDays([1, 2, 3, 4, 5, 6]);
     saveRoutineBtn.textContent = "Save routine";
-    cancelEditBtn.style.display = "none";
+    cancelEditBtn.hidden = true;
   }
 
   function startEditRoutine(id) {
@@ -693,7 +904,8 @@ button svg.ico { margin-right: 6px; }
     routineItems.value = r.items.join("\n");
     setDays(r.days);
     saveRoutineBtn.textContent = "Update routine";
-    cancelEditBtn.style.display = "";
+    cancelEditBtn.hidden = false;
+    routineName.scrollIntoView({ behavior: "smooth", block: "center" });
     routineName.focus();
   }
 
@@ -711,17 +923,17 @@ button svg.ico { margin-right: 6px; }
     const name = cleanText(routineName.value);
     const items = routineItems.value.split(/\r?\n/).map((l) => cleanText(stripLead(l))).filter((l) => l.length > 1);
     const days = [...selectedDays].filter((d) => d >= 1 && d <= 6).sort((a, b) => a - b);
-    if (!name) { status.textContent = "Give the routine a name."; return; }
-    if (items.length === 0) { status.textContent = "Add at least one step."; return; }
-    if (days.length === 0) { status.textContent = "Pick at least one day (Sunday is always off)."; return; }
+    if (!name) { setStatus("Give the routine a name."); return; }
+    if (items.length === 0) { setStatus("Add at least one step."); return; }
+    if (days.length === 0) { setStatus("Pick at least one day (Sunday is always off)."); return; }
 
     if (editingRoutineId) {
       const r = routines.find((x) => x.id === editingRoutineId);
       if (r) Object.assign(r, { name, items, days });
-      status.textContent = `Updated "${name}".`;
+      setStatus(`Updated "${name}".`);
     } else {
       routines.push({ id: newId(), name, items, days });
-      status.textContent = `Saved "${name}".`;
+      setStatus(`Saved "${name}".`);
     }
     saveRoutines();
     resetRoutineForm();
@@ -729,42 +941,39 @@ button svg.ico { margin-right: 6px; }
     renderRoutines(); render();
   });
 
-  cancelEditBtn.addEventListener("click", () => { resetRoutineForm(); });
+  cancelEditBtn.addEventListener("click", resetRoutineForm);
 
   // ---------- Reminders ----------
   function notificationsSupported() { return "Notification" in window; }
 
   function updateNotifyButton() {
-    if (!notificationsSupported()) { notifyBtn.style.display = "none"; return; }
+    if (!notificationsSupported()) { notifyBtn.hidden = true; return; }
     if (Notification.permission === "granted") { notifyBtn.textContent = "Notifications on"; notifyBtn.disabled = true; }
     else if (Notification.permission === "denied") { notifyBtn.textContent = "Notifications blocked"; notifyBtn.disabled = true; }
     else { notifyBtn.textContent = "Enable notifications"; notifyBtn.disabled = false; }
   }
 
   notifyBtn.addEventListener("click", async () => {
-    try {
-      await Notification.requestPermission();
-    } catch (e) { /* ignore */ }
+    try { await Notification.requestPermission(); } catch (e) { /* ignore */ }
     updateNotifyButton();
     if (Notification.permission === "granted") {
       const open = pendingTasks();
       if (open.length) sendNotification(open);
-      else status.textContent = "Notifications are on. You'll be reminded when you have tasks to do.";
+      else setStatus("Notifications are on. You'll be reminded when you have tasks to do.");
     }
   });
 
   reminderTime.value = settings.reminderTime || "08:00";
   reminderTime.addEventListener("change", () => {
     settings.reminderTime = reminderTime.value || "08:00";
-    write(KEYS.settings, settings);
-    status.textContent = `Reminder set for ${settings.reminderTime}.`;
+    saveSettings();
+    setStatus(`Reminder set for ${settings.reminderTime}.`);
   });
 
   function minutesOf(hhmm) {
     const [h, m] = (hhmm || "08:00").split(":").map(Number);
     return h * 60 + m;
   }
-
   function pendingTasks() { return tasks.filter((t) => !t.done); }
 
   function showReminder() {
@@ -784,7 +993,6 @@ button svg.ico { margin-right: 6px; }
       reminderList.appendChild(li);
     }
     reminderBox.classList.add("show");
-
     sendNotification(open);
   }
 
@@ -796,13 +1004,7 @@ button svg.ico { margin-right: 6px; }
     const more = n > 3 ? ` and ${n - 3} more` : "";
     const title = n === 1 ? "You have 1 unchecked task" : `You have ${n} unchecked tasks`;
     const body = `To do today: ${names.join(", ")}${more}.`;
-    const options = {
-      body,
-      tag: "daily-checklist",   // replaces the previous reminder instead of stacking
-      renotify: true,
-      icon: "icon-192.png",
-      badge: "icon-192.png",
-    };
+    const options = { body, tag: "daily-checklist", renotify: true, icon: "icon-192.png", badge: "icon-192.png" };
     if (navigator.serviceWorker) {
       navigator.serviceWorker.ready
         .then((reg) => reg.showNotification(title, options))
@@ -823,108 +1025,276 @@ button svg.ico { margin-right: 6px; }
   }
 
   $("reminderOk").addEventListener("click", () => reminderBox.classList.remove("show"));
-  $("reminderGo").addEventListener("click", () => {
-    reminderBox.classList.remove("show");
-    document.querySelector(".layout > .card:last-child").scrollIntoView({ behavior: "smooth", block: "start" });
-  });
 
-  // ---------- Checklist rendering ----------
-  function buildItem(t, opts) {
-    const li = document.createElement("li");
-    if (t.done) li.classList.add("done");
+  // ---------- Schedule rendering ----------
+  // Which group a task belongs to: a course code, Routines, or General.
+  function groupOf(t) {
+    if (t.routineId) return "ROUTINE";
+    if (t.course) return t.course;
+    return "GEN";
+  }
+  function groupLabel(k) {
+    if (k === "ROUTINE") return "Routines";
+    if (k === "GEN") return "General";
+    return settings.subjectNames[k] || k;
+  }
+  // Course activities first, sorted by date and time; then routines; then general tasks.
+  function sortTasks(a, b) {
+    const rank = (t) => (groupOf(t) === "GEN" ? 2 : groupOf(t) === "ROUTINE" ? 1 : 0);
+    return rank(a) - rank(b) || dateKey(a) - dateKey(b) || timeKey(a) - timeKey(b)
+      || a.text.localeCompare(b.text);
+  }
 
-    if (opts && opts.checkable) {
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = !!t.done;
-      cb.addEventListener("change", () => { t.done = cb.checked; saveTasks(); render(); });
-      li.appendChild(cb);
+  // One button per subject above the grid. The selected one is filled in.
+  function subjectButton(key, label, count) {
+    const b = document.createElement("button");
+    b.className = "subj-btn";
+    b.setAttribute("aria-pressed", activeSubject === key ? "true" : "false");
+    b.textContent = label;
+    const n = document.createElement("span");
+    n.className = "n";
+    n.textContent = count;
+    b.appendChild(n);
+    b.addEventListener("click", () => { activeSubject = key; render(); });
+    return b;
+  }
+
+  function renderSubjectBar() {
+    const bar = $("subjectBar");
+    bar.innerHTML = "";
+    if (tasks.length === 0) return;
+
+    const counts = new Map();
+    tasks.forEach((t) => counts.set(groupOf(t), (counts.get(groupOf(t)) || 0) + 1));
+
+    // Course codes ordered by their earliest deadline
+    const first = new Map();
+    tasks.forEach((t) => {
+      const k = groupOf(t);
+      first.set(k, Math.min(first.get(k) ?? Number.MAX_SAFE_INTEGER, dateKey(t)));
+    });
+    const courses = [...counts.keys()]
+      .filter((k) => k !== "ROUTINE" && k !== "GEN")
+      .sort((a, b) => first.get(a) - first.get(b) || a.localeCompare(b));
+
+    if (activeSubject !== "ALL" && !counts.has(activeSubject)) activeSubject = "ALL";
+
+    bar.appendChild(subjectButton("ALL", "All", tasks.length));
+    courses.forEach((k) => bar.appendChild(subjectButton(k, groupLabel(k), counts.get(k))));
+    if (counts.has("ROUTINE")) bar.appendChild(subjectButton("ROUTINE", "Routines", counts.get("ROUTINE")));
+    if (counts.has("GEN")) bar.appendChild(subjectButton("GEN", "General", counts.get("GEN")));
+
+    // Rename the selected course (its full name shows on its button)
+    if (activeSubject !== "ALL" && activeSubject !== "ROUTINE" && activeSubject !== "GEN") {
+      const rename = document.createElement("button");
+      rename.className = "icon-btn";
+      rename.innerHTML = ICON.pen;
+      rename.setAttribute("aria-label", `Name ${activeSubject}`);
+      rename.addEventListener("click", () => {
+        const next = prompt(`Full name for ${activeSubject} (leave empty to remove):`, settings.subjectNames[activeSubject] || "");
+        if (next === null) return;
+        const clean = cleanText(next);
+        if (clean) settings.subjectNames[activeSubject] = clean;
+        else delete settings.subjectNames[activeSubject];
+        saveSettings(); render();
+      });
+      bar.appendChild(rename);
     }
+  }
 
-    const body = document.createElement("div");
-    body.className = "body";
+  // One activity card: checkbox and title on top, course, date and time below.
+  function taskCard(t) {
+    if (t.id === editingTaskId) return editForm(t);
+    const card = document.createElement("div");
+    card.className = "task-card" + (t.done ? " done" : "");
 
-    const title = document.createElement("div");
-    title.className = "title";
-    title.textContent = t.text;
-    if (opts && opts.editable) title.addEventListener("dblclick", () => editTask(t));
-    body.appendChild(title);
+    const top = document.createElement("div");
+    top.className = "tc-top";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!t.done;
+    cb.setAttribute("aria-label", "Mark done");
+    cb.addEventListener("change", () => { t.done = cb.checked; saveTasks(); render(); });
+
+    const text = document.createElement("div");
+    text.className = "tc-text";
+    text.textContent = t.text;
+
+    const actions = document.createElement("div");
+    actions.className = "task-actions";
+    const pen = document.createElement("button");
+    pen.className = "icon-btn";
+    pen.innerHTML = ICON.pen;
+    pen.setAttribute("aria-label", "Edit task");
+    pen.addEventListener("click", () => editTask(t));
+    const del = document.createElement("button");
+    del.className = "icon-btn";
+    del.innerHTML = ICON.x;
+    del.setAttribute("aria-label", "Delete task");
+    del.addEventListener("click", () => {
+      tasks = tasks.filter((x) => x.id !== t.id);
+      saveTasks(); render();
+    });
+    actions.append(pen, del);
+
+    top.append(cb, text, actions);
+    card.appendChild(top);
 
     const meta = document.createElement("div");
-    meta.className = "meta";
-    const addChip = (cls, svg, text) => {
+    meta.className = "tc-meta";
+    const addChip = (cls, svg, label) => {
       const el = document.createElement("span");
       el.className = cls;
       if (svg) el.innerHTML = svg;
-      el.appendChild(document.createTextNode(text));
+      el.appendChild(document.createTextNode(label));
       meta.appendChild(el);
     };
-    if (t.routineName) addChip("chip routine", ICON.repeat, t.routineName);
     if (t.course) addChip("chip course", "", t.course);
+    if (t.check) addChip("chip", "", "check text");
+    if (t.routineName) addChip("chip routine", ICON.repeat, t.routineName);
     if (t.date) addChip("chip", ICON.calendar, t.date);
     if (t.time) addChip("chip", ICON.clock, t.time);
-    if (meta.childNodes.length) body.appendChild(meta);
-    li.appendChild(body);
-    return li;
+    if (meta.childNodes.length) card.appendChild(meta);
+    return card;
   }
 
-  function render() {
-    list.innerHTML = "";
+  function renderSchedule() {
+    renderSubjectBar();
+    subjectsEl.innerHTML = "";
     if (tasks.length === 0) {
       const empty = document.createElement("div");
       empty.className = "empty";
-      empty.textContent = "Nothing here yet. Read your schedule, add a routine, or add a task above.";
-      list.appendChild(empty);
+      empty.style.gridColumn = "1 / -1";
+      empty.textContent = "Nothing here yet. Upload a schedule, or type a task above.";
+      subjectsEl.appendChild(empty);
+      return;
     }
-    tasks.forEach((t) => {
-      const li = buildItem(t, { checkable: true, editable: true });
-      const pen = document.createElement("button");
-      pen.className = "icon icon-btn";
-      pen.innerHTML = ICON.pen;
-      pen.setAttribute("aria-label", "Edit task");
-      pen.addEventListener("click", () => editTask(t));
+    const shown = tasks
+      .filter((t) => activeSubject === "ALL" || groupOf(t) === activeSubject)
+      .slice()
+      .sort(sortTasks);
+    shown.forEach((t) => subjectsEl.appendChild(taskCard(t)));
+  }
 
-      const del = document.createElement("button");
-      del.className = "icon icon-btn";
-      del.innerHTML = ICON.x;
-      del.setAttribute("aria-label", "Delete task");
-      del.addEventListener("click", () => {
-        tasks = tasks.filter((x) => x.id !== t.id);
-        saveTasks(); render();
-      });
-      li.append(pen, del);
-      list.appendChild(li);
-    });
-
+  function render() {
+    renderSchedule();
     const total = tasks.length;
     const doneCount = tasks.filter((t) => t.done).length;
-    progress.textContent = total ? `${doneCount} of ${total} done` : "";
+    progress.textContent = total ? `${doneCount} of ${total} done` : "Nothing to do yet";
     barFill.style.width = total ? `${(doneCount / total) * 100}%` : "0%";
   }
 
+  // Each review item has editable fields. Changes are kept until you add or discard them.
   function renderPending() {
     pendingList.innerHTML = "";
-    pending.forEach((p) => pendingList.appendChild(buildItem(p, {})));
-    pendingCount.textContent = pending.length ? `${pending.length} item(s) found. Review, then add.` : "";
-    pendingWrap.classList.toggle("show", pending.length > 0);
+    pending.forEach((p, i) => {
+      const li = document.createElement("li");
+      li.className = "pend-row";
+      const field = (value, placeholder, cls, key) => {
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.value = value || "";
+        inp.placeholder = placeholder;
+        inp.className = cls;
+        inp.setAttribute("aria-label", placeholder);
+        inp.addEventListener("input", () => { p[key] = inp.value; });
+        return inp;
+      };
+      const del = document.createElement("button");
+      del.className = "icon-btn";
+      del.innerHTML = ICON.x;
+      del.setAttribute("aria-label", "Remove this item");
+      del.addEventListener("click", () => { pending.splice(i, 1); renderPending(); });
+      li.append(
+        field(p.text, "Task", "f-text", "text"),
+        field(p.course, "Course", "f-small", "course"),
+        field(p.date, "Date", "f-small", "date"),
+        field(p.time, "Time", "f-small", "time"),
+        del
+      );
+      pendingList.appendChild(li);
+    });
+    pendingCount.textContent = pending.length ? `${pending.length} item(s) found. Edit anything, then add.` : "";
+    pendingWrap.hidden = pending.length === 0;
   }
 
+  // Adds a task unless the same text already exists for that subject (re-reading doesn't duplicate).
   function addTask(text, extra) {
     const clean = cleanText(text);
-    if (!clean) return;
-    tasks.push({ id: newId(), text: clean, done: false, ...(extra || {}) });
+    if (!clean) return false;
+    const e = extra || {};
+    if (tasks.some((t) => !t.routineId && t.text.toLowerCase() === clean.toLowerCase() && (t.course || "") === (e.course || ""))) return false;
+    tasks.push({ id: newId(), text: clean, done: false, ...e });
+    return true;
   }
 
+  // Opens the edit form on an activity card.
   function editTask(t) {
-    const next = prompt("Edit task:", t.text);
-    if (next === null) return;
-    const clean = cleanText(next);
+    editingTaskId = t.id;
+    render();
+    const first = document.querySelector(".task-card.editing input");
+    if (first) first.focus();
+  }
+
+  function saveEdit(t, form) {
+    const [text, course, date, time] = form.querySelectorAll("input");
+    const clean = cleanText(text.value);
     if (clean) t.text = clean;
-    else tasks = tasks.filter((x) => x.id !== t.id);
+    t.course = course.value.trim().toUpperCase();
+    t.date = date.value.trim();
+    t.time = time.value.trim();
+    t.check = false;
+    editingTaskId = null;
     saveTasks(); render();
   }
 
-  // ---------- Image handling ----------
+  function editForm(t) {
+    const card = document.createElement("div");
+    card.className = "task-card editing";
+    const form = document.createElement("div");
+    form.className = "edit-form";
+    form.style.border = "none";
+    form.style.padding = "0";
+
+    const mk = (value, placeholder, cls) => {
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.value = value || "";
+      inp.placeholder = placeholder;
+      inp.className = cls;
+      inp.setAttribute("aria-label", placeholder);
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") saveEdit(t, form);
+        if (e.key === "Escape") { editingTaskId = null; render(); }
+      });
+      return inp;
+    };
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const save = document.createElement("button");
+    save.textContent = "Save";
+    save.addEventListener("click", () => saveEdit(t, form));
+    const cancel = document.createElement("button");
+    cancel.className = "secondary";
+    cancel.textContent = "Cancel";
+    cancel.addEventListener("click", () => { editingTaskId = null; render(); });
+    actions.append(save, cancel);
+
+    form.append(
+      mk(t.text, "Task", "f-text"),
+      mk(t.course, "Course", "f-small"),
+      mk(t.date, "Date", "f-small"),
+      mk(t.time, "Time", "f-small"),
+      actions
+    );
+    card.appendChild(form);
+    return card;
+  }
+
+  // ---------- Upload and automatic reading ----------
+  function setReadStatus(msg) { readStatus.textContent = msg; }
+
   imageInput.addEventListener("change", () => {
     const file = imageInput.files && imageInput.files[0];
     if (!file) { preview.style.display = "none"; extractBtn.disabled = true; return; }
@@ -933,38 +1303,45 @@ button svg.ico { margin-right: 6px; }
     preview.src = currentImageUrl;
     preview.style.display = "block";
     extractBtn.disabled = false;
-    status.textContent = "";
+    setReadStatus("");
   });
 
   extractBtn.addEventListener("click", async () => {
     const file = imageInput.files && imageInput.files[0];
     if (!file) return;
     if (typeof Tesseract === "undefined") {
-      status.textContent = "Image reader couldn't load. Type or paste your tasks below instead.";
+      setReadStatus("The image reader couldn't load. Check your internet connection, or type the tasks instead.");
       return;
     }
     extractBtn.disabled = true;
-    status.textContent = "Loading the reader (the first time can take a while)...";
+    setReadStatus("Loading the reader (the first time can take a while)...");
     let worker = null;
     try {
       worker = await Tesseract.createWorker("eng", 1, {
         logger: (m) => {
           if (m.status === "recognizing text" && m.progress < 1) {
-            status.textContent = `Reading text... ${Math.round(m.progress * 100)}%`;
+            setReadStatus(`Reading text... ${Math.round(m.progress * 100)}%`);
           }
         },
       });
-      const found = await readTodoList(file, worker, (msg) => { status.textContent = msg; });
+      const found = await readTodoList(file, worker, setStatus);
       if (found.length === 0) {
-        status.textContent = "No tasks found. Try a clearer or larger image, or type the tasks below.";
-      } else {
+        setReadStatus("No tasks found. Try a clearer or larger image, or type the tasks instead.");
+      } else if (reviewMode.checked) {
         pending = found;
         renderPending();
-        status.textContent = "Review the items below, then add them to your checklist.";
+        setReadStatus("Review the items on the left, then add them.");
+      } else {
+        let added = 0;
+        found.forEach((p) => { if (addTask(p.text, { course: p.course, date: p.date, time: p.time, check: !!p.check })) added++; });
+        saveTasks(); render();
+        setReadStatus(added
+          ? `Added ${added} task(s), grouped under their course codes.`
+          : "Those tasks were already in your schedule.");
       }
     } catch (err) {
       console.error(err);
-      status.textContent = `Reading failed: ${err && err.message ? err.message : "unknown error"}. Try a clearer image, or type the tasks below.`;
+      setReadStatus(`Reading failed: ${err && err.message ? err.message : "unknown error"}. Try a clearer image, or type the tasks instead.`);
     } finally {
       if (worker) await worker.terminate();
       extractBtn.disabled = false;
@@ -972,34 +1349,42 @@ button svg.ico { margin-right: 6px; }
   });
 
   $("addPendingBtn").addEventListener("click", () => {
-    pending.forEach((p) => addTask(p.text, { course: p.course, date: p.date, time: p.time }));
-    const n = pending.length;
+    let added = 0;
+    pending.forEach((p) => { if (addTask(p.text, { course: (p.course || "").trim().toUpperCase(), date: (p.date || "").trim(), time: (p.time || "").trim(), check: false })) added++; });
     pending = [];
     renderPending();
     saveTasks(); render();
-    status.textContent = `Added ${n} task(s) to your checklist.`;
+    setStatus(`Added ${added} task(s).`);
   });
 
   $("discardPendingBtn").addEventListener("click", () => {
     pending = [];
     renderPending();
-    status.textContent = "";
+    setStatus("");
   });
 
-  // ---------- Manual add ----------
+  // Each line is either "Task" (goes under General) or "CODE | Task | Date | Time".
   importBtn.addEventListener("click", () => {
-    const lines = manualText.value.split(/\r?\n/).map((l) => cleanText(stripLead(l))).filter((l) => l.length > 1);
-    if (lines.length === 0) { status.textContent = "Nothing to add. Type one task per line."; return; }
-    lines.forEach((l) => addTask(l));
+    const lines = manualText.value.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 1);
+    if (lines.length === 0) { setStatus("Nothing to add. Type one task per line."); return; }
+    let added = 0;
+    lines.forEach((line) => {
+      if (line.includes("|")) {
+        const [code, text, date, time] = line.split("|").map((x) => cleanText(x || ""));
+        if (addTask(text, { course: (code || "").toUpperCase(), date: date || "", time: time || "", check: false })) added++;
+      } else {
+        if (addTask(stripLead(line))) added++;
+      }
+    });
     manualText.value = "";
     saveTasks(); render();
-    status.textContent = `Added ${lines.length} task(s).`;
+    setStatus(`Added ${added} task(s).`);
   });
 
+  // ---------- Checklist actions ----------
   function addFromInput() {
-    addTask(newTask.value);
+    if (addTask(newTask.value)) { saveTasks(); render(); }
     newTask.value = "";
-    saveTasks(); render();
     newTask.focus();
   }
   $("addBtn").addEventListener("click", addFromInput);
@@ -1010,7 +1395,7 @@ button svg.ico { margin-right: 6px; }
     saveTasks(); render();
   });
   $("clearAllBtn").addEventListener("click", () => {
-    if (tasks.length && confirm("Clear the whole checklist?")) {
+    if (tasks.length && confirm("Clear everything on the schedule?")) {
       tasks = [];
       saveTasks(); render();
     }
@@ -1028,7 +1413,6 @@ button svg.ico { margin-right: 6px; }
   renderRoutines();
   refresh();
 
-  // Re-check every minute (new day, reminder time) and whenever the app comes back into view.
   setInterval(refresh, 60 * 1000);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refresh();
